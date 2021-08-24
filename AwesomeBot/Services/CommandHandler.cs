@@ -18,18 +18,16 @@ namespace AwesomeBot.Services
         public static IServiceProvider _provider;
         public static DiscordSocketClient _discord;
         public static CommandService _command;
-        public static IConfigurationRoot _config;
         private readonly LavaNode _lavaNode;
         public static List<Mute> Mutes = new List<Mute>();
         private readonly Servers _servers;
 
 
-        public CommandHandler(DiscordSocketClient discord, CommandService commands, IConfigurationRoot config, IServiceProvider provider, LavaNode lavaNode, Servers servers)
+        public CommandHandler(DiscordSocketClient discord, CommandService commands, IServiceProvider provider, LavaNode lavaNode, Servers servers)
         {
             _provider = provider;
             _discord = discord;
             _command = commands;
-            _config = config;
             _lavaNode = lavaNode;
             _servers = servers;
 

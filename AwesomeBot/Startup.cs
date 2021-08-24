@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,19 +8,14 @@ using AwesomeBot.Services;
 using Victoria;
 using Discord.Addons.Interactive;
 using Infrastructure;
-
+using AwesomeBot.Core;
+using Infrastructure.Migrations;
 namespace AwesomeBot
 {
     public class Startup
     {
-        public IConfigurationRoot Configuration { get; }
         public Startup(string[] args) 
         {
-            var builder = new ConfigurationBuilder()
-                .SetBasePath(AppContext.BaseDirectory)
-                .AddYamlFile("_config.yml");
-
-            Configuration = builder.Build();
 
         }
         public static async Task RunAsync(string[] args)
@@ -68,9 +60,10 @@ namespace AwesomeBot
 
                 })
                 .AddSingleton<InteractiveService>()
-                .AddSingleton(Configuration)
                 .AddDbContext<Context>()
+                .AddSingleton<AppSettingsRoot>()
                 .AddSingleton<Servers>();
+                
             
         }
     }

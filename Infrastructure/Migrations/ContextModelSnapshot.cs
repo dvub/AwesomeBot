@@ -16,7 +16,7 @@ namespace Infrastructure.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 64)
                 .HasAnnotation("ProductVersion", "5.0.9");
 
-            modelBuilder.Entity("Infrastructure.Context+Server", b =>
+            modelBuilder.Entity("Infrastructure.Server", b =>
                 {
                     b.Property<ulong>("Id")
                         .ValueGeneratedOnAdd()

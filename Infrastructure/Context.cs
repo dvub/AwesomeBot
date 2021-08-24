@@ -1,14 +1,18 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using System;
+using AwesomeBot.Core;
 
 namespace Infrastructure
 {
     public class Context : DbContext
     {
+
         public DbSet<Server> Servers { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            string connectionString = "server=localhost;user=root;database=awesomebot;port=3306;Connection Timeout=5;";
+            var appsettings = AppSettingsRoot.IsCreated
+                ? AppSettingsRoot.Load()
+                : AppSettingsRoot.Create();
+            string connectionString = appsettings.ConnectionString;
             var serverVersion = ServerVersion.AutoDetect(connectionString);
 
             optionsBuilder.UseMySql(connectionString, serverVersion);

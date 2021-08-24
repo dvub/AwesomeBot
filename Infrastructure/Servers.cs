@@ -3,14 +3,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-
 using System.Threading.Tasks;
-
+using Infrastructure;
 namespace Infrastructure
 {
     public class Servers
     {
         private readonly Context _context;
+        
         public Servers(Context context)
         {
             _context = context;
