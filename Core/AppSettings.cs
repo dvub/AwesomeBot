@@ -10,6 +10,9 @@ using System.IO;
 
 namespace AwesomeBot.Core
 {
+    //Thanks to HueByte for letting me use his AppSettings class
+    //and helping me out so much
+
     public class ConnectionString
     {
         public string DatabaseConnectionString { get; set; }
