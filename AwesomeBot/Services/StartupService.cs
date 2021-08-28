@@ -6,6 +6,7 @@ using System.Diagnostics;
 using Discord.WebSocket;
 using System.IO;
 using AwesomeBot.Core;
+using System.Collections.Generic;
 
 namespace AwesomeBot.Services
 {
@@ -14,25 +15,23 @@ namespace AwesomeBot.Services
         public static IServiceProvider _provider;
         public static DiscordSocketClient _discord;
         private readonly CommandService _command;
+        private readonly AppSettingsRoot _config;
 
 
-        public StartupService(IServiceProvider provider, DiscordSocketClient discord, CommandService commands)
+        public StartupService(IServiceProvider provider, DiscordSocketClient discord, CommandService commands, AppSettingsRoot config)
         {
             _provider = provider;
             _discord = discord;
             _command = commands;
-
+            _config = config;
 
         }
 
         public async Task StartAsync()
         {
-            var appsettings = AppSettingsRoot.IsCreated
-                ? AppSettingsRoot.Load()
-                : AppSettingsRoot.Create();
+
             
-            
-            string token = appsettings.TokenString;
+            string token = _config.TokenString;
             if (string.IsNullOrEmpty(token))
             {
                 Console.WriteLine("please provide discord token");

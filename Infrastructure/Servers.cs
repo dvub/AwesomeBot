@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Infrastructure;
+
 namespace Infrastructure
 {
     public class Servers
@@ -41,8 +42,6 @@ namespace Infrastructure
                 .FirstOrDefaultAsync();
 
             return await Task.FromResult(prefix);
-
-            
         }
     }
 

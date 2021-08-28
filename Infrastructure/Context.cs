@@ -5,14 +5,16 @@ namespace Infrastructure
 {
     public class Context : DbContext
     {
+        private readonly AppSettingsRoot _config;
 
+        public Context(AppSettingsRoot config)
+        {
+            _config = config;
+        }
         public DbSet<Server> Servers { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            var appsettings = AppSettingsRoot.IsCreated
-                ? AppSettingsRoot.Load()
-                : AppSettingsRoot.Create();
-            string connectionString = appsettings.ConnectionString;
+            string connectionString = _config.ConnectionString;
             var serverVersion = ServerVersion.AutoDetect(connectionString);
 
             optionsBuilder.UseMySql(connectionString, serverVersion);

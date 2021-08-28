@@ -20,22 +20,35 @@ namespace AwesomeBot.Services
         public static CommandService _command;
         private readonly LavaNode _lavaNode;
         public static List<Mute> Mutes = new List<Mute>();
-        private readonly Servers _servers;
+        private readonly ServerService _servers;
 
 
-        public CommandHandler(DiscordSocketClient discord, CommandService commands, IServiceProvider provider, LavaNode lavaNode, Servers servers)
+        public CommandHandler(DiscordSocketClient discord, CommandService commands, IServiceProvider provider, LavaNode lavaNode, ServerService servers)
         {
             _provider = provider;
             _discord = discord;
             _command = commands;
             _lavaNode = lavaNode;
             _servers = servers;
-
             var newTask = new Task(async () => await MuteHandler());
             newTask.Start();
             _discord.Ready += OnReady;
             _discord.Ready += onReadyAsync;
             _discord.MessageReceived += _discord_MessageReceived;
+            _lavaNode.OnTrackEnded += _lavaNode_OnTrackEnded;
+
+            
+
+        }
+        private async Task _lavaNode_OnTrackEnded(Victoria.EventArgs.TrackEndedEventArgs arg)
+        {
+            Console.WriteLine("Track ended:" + arg.Reason);
+
+            if (Modules.Media.isLooping)
+            {
+                await arg.Player.PlayAsync(arg.Track);
+            }
+
         }
         private async Task MuteHandler()
         {
@@ -75,9 +88,16 @@ namespace AwesomeBot.Services
 
         private async Task _discord_MessageReceived(SocketMessage arg)
         {
-            
             var msg = arg as SocketUserMessage;
-            var prefix = await _servers.GetGuildPrefix((msg.Channel as SocketGuildChannel).Guild.Id) ?? "!";
+            ulong serverId = (msg.Channel as SocketGuildChannel).Guild.Id;
+            var server = _servers.servers.Find(x => x.Id == serverId);
+            string prefix = "";
+            if (server == null)
+            {
+                await _servers.UpdatePrefix(serverId, "!");
+                server = _servers.servers.Find(x => x.Id == serverId);
+            }
+            prefix = server.Prefix;
 
             if (msg != null)
             {

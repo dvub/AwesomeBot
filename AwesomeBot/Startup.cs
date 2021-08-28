@@ -6,7 +6,7 @@ using Discord.WebSocket;
 using Discord.Commands;
 using AwesomeBot.Services;
 using Victoria;
-using Discord.Addons.Interactive;
+using Interactivity ;
 using Infrastructure;
 using AwesomeBot.Core;
 using Infrastructure.Migrations;
@@ -42,7 +42,7 @@ namespace AwesomeBot
         {
             services.AddSingleton(new DiscordSocketClient(new DiscordSocketConfig
             {
-                LogLevel = Discord.LogSeverity.Debug,
+                LogLevel = Discord.LogSeverity.Info,
                 MessageCacheSize = 1000
             }))
                 .AddSingleton(new CommandService(new CommandServiceConfig
@@ -51,17 +51,18 @@ namespace AwesomeBot
                     DefaultRunMode = RunMode.Async,
                     CaseSensitiveCommands = false
                 }))
-
                 .AddSingleton<CommandHandler>()
                 .AddSingleton<StartupService>()
                 .AddLavaNode(x =>
                 {
-                    x.SelfDeaf = true;
-
+                    x.ReconnectAttempts = 3;
                 })
-                .AddSingleton<InteractiveService>()
+                .AddSingleton<InteractivityService>()
+                .AddSingleton<ServerService>()
                 .AddDbContext<Context>()
-                .AddSingleton<AppSettingsRoot>()
+                .AddSingleton(AppSettingsRoot.IsCreated
+                    ? AppSettingsRoot.Load()
+                    : AppSettingsRoot.Create())
                 .AddSingleton<Servers>();
                 
             

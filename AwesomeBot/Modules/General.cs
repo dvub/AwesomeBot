@@ -17,13 +17,13 @@ namespace AwesomeBot.Modules
     public class General : ModuleBase<SocketCommandContext>
     {
         CommandService _commandService;
-        private readonly Servers _servers;
+        private readonly ServerService _servers;
         string timeFormat = "MM/dd/yyyy";
 
-        public General(CommandService commandService, Servers servers)
+        public General(CommandService commandService, ServerService serverService)
         {
             _commandService = commandService;
-            _servers = servers;
+            _servers = serverService;
         }
 
         
@@ -173,7 +173,7 @@ namespace AwesomeBot.Modules
         {
             if (prefix == null)
             {
-                var GuildPrefix = await _servers.GetGuildPrefix(Context.Guild.Id) ?? "!";
+                var GuildPrefix = _servers.servers.Find(x => x.Id == Context.Guild.Id).Prefix;
                 await ReplyAsync($"The current prefix for this bot is `{GuildPrefix}`");
                 return;
             }
@@ -182,9 +182,10 @@ namespace AwesomeBot.Modules
                 await ReplyAsync("Length of the new prefix is too long!");
                 return;
             }
-            await _servers.ModifyGuildPrefix(Context.Guild.Id, prefix);
+            await _servers.UpdatePrefix(Context.Guild.Id, prefix);
             await ReplyAsync($"The prefix has been changed to `{prefix}`");
 
+            
         }
 
     } 

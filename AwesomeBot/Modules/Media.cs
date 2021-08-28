@@ -1,28 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Discord.Commands;
 using Discord;
 using Discord.WebSocket;
-using AwesomeBot.Services;
-using System.Reflection;
-using Discord.Addons.Interactive;
+
+using Interactivity.Selection;
 using Victoria;
 using Victoria.Enums;
-using Victoria.Responses;
-using Victoria.Responses.Search;
-using Victoria.Filters;
-using Microsoft.Extensions.Configuration;
+using Interactivity;
+using Victoria.Payloads;
+using Interactivity.Pagination;
 
 namespace AwesomeBot.Modules
 {
     [Summary("Does lots of different things like play music!")]
-    public class Media: InteractiveBase<SocketCommandContext>
+    public class Media : ModuleBase
     {
         public static LavaNode _lavaNode;
         DiscordSocketClient _discord;
+        public InteractivityService Interactivity { get; set; }
         public static bool isLooping { get; set; }
         public Media(LavaNode lavanode, DiscordSocketClient discord)
         {
@@ -30,17 +28,29 @@ namespace AwesomeBot.Modules
 
             _discord = discord;
 
+        }
 
+        [Command("loop")]
+        public async Task LoopAsync()
+        {
+            if (!isLooping)
+            {
+                isLooping = true;
+                await ReplyAsync("Started Looping");
+                return;
+            }
+            isLooping = false;
+            await ReplyAsync("Stopped Looping");
+            return;
         }
 
         [Command("Play", RunMode = RunMode.Async)]
         [Alias("p")]
         [Summary("search Youtube for a song and play it in a VC!")]
         
-        public async Task PlayAsync(string searchType, [Remainder] string searchQuery )
+        public async Task PlayAsync([Remainder] string searchQuery )
         {
 
-            bool timeout = false;
             if (string.IsNullOrWhiteSpace(searchQuery))
             {
                 await ReplyAsync("Please provide search terms.");
@@ -63,57 +73,60 @@ namespace AwesomeBot.Modules
                 return;
             }
             
-            var searchResponse = await _lavaNode.SearchAsync((SearchType)Enum.Parse(typeof(SearchType), searchType), searchQuery);
-            if (searchResponse.Status == SearchStatus.LoadFailed ||
-                searchResponse.Status == SearchStatus.NoMatches)
+            
+            var searchResponse = await _lavaNode.SearchYouTubeAsync(searchQuery);
+            if (searchResponse.LoadStatus == LoadStatus.LoadFailed ||
+                searchResponse.LoadStatus == LoadStatus.NoMatches)
             {
                 await ReplyAsync($"I wasn't able to find anything for `{searchQuery}`.");
                 return;
             }
 
-
-            int i = 0;
-            var builder = new EmbedBuilder();
-            builder.Title = $"🎶 **_Now showing Results for {searchQuery}:_** 🎶 ";
-            builder.Footer = new EmbedFooterBuilder()
-                .WithText(" Reply with a number for which song you would like!");
-
-            
+                        List<PageBuilder> pages = new List<PageBuilder>();
+            int maxResults = 5;
+            int pageCount = searchResponse.Tracks.Count / maxResults;
             try
             {
-                foreach (var _track in searchResponse.Tracks.ToList())
+                for (int i = 0; i < pageCount; i++)
                 {
-                    builder.AddField($"[{i + 1}] _{_track.Title}_ ♪", _track.Url, false);
-
-                    i++;
+                    var builder = new PageBuilder()
+                        .WithTitle($"Now Showing: Page {i + 1}")
+                        .WithDescription($"Results for {searchQuery}, page {i + 1} of {pageCount}");
+                    for (int j = 0; j < maxResults; j++)
+                    {
+                        int number = j + (i * 5);
+                            var _track = searchResponse.Tracks.ToList()[number];
+                            builder.AddField($"[{number + 1}] _{ _track.Title}_", _track.Url, false);
+                    }
+                    pages.Add(builder);
                 }
             }
-            catch (ArgumentException e )
+            catch (Exception e)
             {
-                await ReplyAndDeleteAsync(""+ e);
+                Console.WriteLine("" + e);
             }
 
-            var embed = builder.Build();
-            await ReplyAsync(null, false, embed);
-
-            var response = await NextMessageAsync() as SocketUserMessage;
+            var paginator = new StaticPaginatorBuilder()
+                .WithUsers(Context.User as SocketUser)
+                .WithPages(pages.ToArray())
+                .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                .WithDefaultEmotes()
+                .Build();
+            
+            //basically dont await this or you cant reply until
+            //the paginated message times out which is never
+            
+            Interactivity.SendPaginatorAsync(paginator, Context.Channel);
+            var response = await Interactivity.NextMessageAsync(x => x.Author == Context.User);
             int song = 0;
-            if (response != null)
+            try
             {
-                try
-                {
-                    song = int.Parse(response.Content) - 1;
-                }
-                catch
-                {
-                    await ReplyAsync("Please enter a number");
-                    return;
-                }
+                song = int.Parse(response.Value.Content) - 1;
             }
-            else
+            catch
             {
-                timeout = true;
-                await ReplyAsync("Response timeout, try again");
+                await ReplyAsync("Please enter a number!");
+                return;
             }
             if (!_lavaNode.TryGetPlayer(Context.Guild, out var player))
             {
@@ -121,18 +134,15 @@ namespace AwesomeBot.Modules
                 return;
             }
             var track = searchResponse.Tracks.ToList()[song];
-            if (!timeout)
+            if (player.PlayerState == PlayerState.Playing || player.PlayerState == PlayerState.Paused)
             {
-                if (player.PlayerState == PlayerState.Playing || player.PlayerState == PlayerState.Paused)
-                {
-                    player.Queue.Enqueue(track);
-                    await ReplyAsync($"🎶 Queued: **_{track.Title}_**");
-                }
-                else
-                {
-                    await player.PlayAsync(track);
-                    await ReplyAsync($"🎶 Now playing: **_{track.Title}_**");
-                }
+                player.Queue.Enqueue(track);
+                await ReplyAsync($"🎶 Queued: **_{track.Title}_**");
+            }
+            else
+            {
+                await player.PlayAsync(track);
+                await ReplyAsync($"🎶 Now playing: **_{track.Title}_**");
             }
         }
         [Command("pause")]
@@ -204,7 +214,7 @@ namespace AwesomeBot.Modules
         [Command("skip")]
         [Alias("sk")]
         [Summary("skips current song.")]
-        public async Task SkipAsync(string amount = null)
+        public async Task SkipAsync()
         {
             if (!_lavaNode.TryGetPlayer(Context.Guild, out var player))
             {
@@ -213,29 +223,12 @@ namespace AwesomeBot.Modules
             }
             if (!(player.Queue.Count == 0))
             {
-                if (amount != null)
+                if (!isLooping)
                 {
-                    int times = 0;
-                    try
-                    {
-                        times = int.Parse(amount);
-
-                    }
-                    catch
-                    {
-                        return;
-                    }
-                    for (int i = 0; i < times; i++)
-                    {
-                        await player.SkipAsync();
-                    }
-                }
-                else
-                {
+                    
                     await player.SkipAsync();
-                    await ReplyAsync($"Skipped {player.Track.Title}");
                 }
-
+                    //await ReplyAsync($"Skipped {player.Track.Title}");
             }
             else
             {
@@ -340,7 +333,7 @@ namespace AwesomeBot.Modules
                 return;
             }
             TimeSpan seekPosition = new TimeSpan(hours, minutes, seconds);
-            if (seekPosition > player.Track.Duration)
+                if (seekPosition > player.Track.Duration)
             {
                 await ReplyAsync("Cannot seek past song duration.");
                 return;
@@ -349,6 +342,7 @@ namespace AwesomeBot.Modules
             await player.SeekAsync(seekPosition);
             await ReplyAsync($"Playing from **_{hours}:{minutes}:{seconds}._**");
         }
+
         [Command("nowplaying")]
         [Alias("current", "playing")]
         [Summary("Get the song that is currently playing.")]
@@ -363,24 +357,7 @@ namespace AwesomeBot.Modules
 
 
         }
-        [Command("Loop")]
-        [Summary("Sets the current song to loop (all it does is add to the queue)")]
-        [Alias("l")]
-        public async Task loopAsync(string times)
-        {
-            if (!_lavaNode.TryGetPlayer(Context.Guild, out var player))
-            {
-                await ReplyAsync("I'm not connected to a voice channel.");
-                return;
-            }
-            int _times = int.Parse(times);
 
-            for (int i = 0; i < _times; i++)
-            {
-                player.Queue.Enqueue(player.Track);
-            }
-            await ReplyAsync($"Looping **_{player.Track.Title} {_times}_** times!");
-        }
         [Command("Equalizer")]
         [Summary("Set an Equalizer for the player")]
         [Alias("eq")]
