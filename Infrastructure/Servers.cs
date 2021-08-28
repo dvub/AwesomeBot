@@ -31,7 +31,8 @@ namespace Infrastructure
                 server.Prefix = prefix;
 
             }
-            await _context.SaveChangesAsync();
+            await _context.SaveServersChanges(_context);
+            
         }
 
         public async Task<string> GetGuildPrefix(ulong id)

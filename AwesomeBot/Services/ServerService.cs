@@ -17,13 +17,14 @@ namespace AwesomeBot.Services
         public ServerService(Context context, Servers _Servers)
         {
             _context = context;
-            _context.SavedChanges += _context_SavedChanges;
+            _context.ServerChangesSaved += _context_SavedChanges;
             servers = _context.Servers.ToList();
             _servers = _Servers;
         }
 
-        private void _context_SavedChanges(object sender, SavedChangesEventArgs e)
+        private void _context_SavedChanges(object sender, EventArgs e)
         {
+            Console.WriteLine("Done!");
             servers = _context.Servers.ToList();
         }
 

@@ -1,5 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using AwesomeBot.Core;
+using System.Collections.Generic;
+using System;
+using System.Threading.Tasks;
 
 namespace Infrastructure
 {
@@ -18,13 +21,22 @@ namespace Infrastructure
             var serverVersion = ServerVersion.AutoDetect(connectionString);
 
             optionsBuilder.UseMySql(connectionString, serverVersion);
+            
         }
-        
+        public async Task SaveServersChanges(Context context)
+        {
+            await context.SaveChangesAsync();
+            ServerChangesSaved?.Invoke(this, EventArgs.Empty);
+        }
+        public EventHandler ServerChangesSaved;
+
     }
+
+
     public class Server
     {
         public ulong Id { get; set; }
         public string Prefix { get; set; }
-
     }
+
 }
