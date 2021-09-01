@@ -5,32 +5,104 @@ using System.Text;
 using System.Threading.Tasks;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using AwesomeBot.Core;
 
 namespace AwesomeBot.Services
 {
     public class ServerService
     {
         public List<Server> servers;
-        private Servers _servers;
         private readonly Context _context;
 
-        public ServerService(Context context, Servers _Servers)
+        public ServerService(Context context)
         {
             _context = context;
             _context.ServerChangesSaved += _context_SavedChanges;
             servers = _context.Servers.ToList();
-            _servers = _Servers;
         }
 
         private void _context_SavedChanges(object sender, EventArgs e)
         {
-            Console.WriteLine("Done!");
             servers = _context.Servers.ToList();
         }
 
-        public async Task UpdatePrefix(ulong id, string prefix)
+        public async Task ModifyGuildPrefix(ulong id, string prefix)
         {
-            await _servers.ModifyGuildPrefix(id, prefix);
+            var server = await _context.Servers
+                .FindAsync(id);
+
+            if (server == null)
+            {
+                _context.Add(new Server { Id = id, Prefix = prefix, Greeting = "", GreetingType = GreetingType.Disabled });
+
+            }
+            else
+            {
+                server.Prefix = prefix;
+
+            }
+            await _context.SaveServersChanges(_context);
         }
+        public async Task ModifyGuildGreetingType(ulong id, string greetingType)
+        {
+            var server = await _context.Servers.FindAsync(id);
+            if (server == null)
+            {
+                _context.Add(new Server { Id = id, Prefix = "!", Greeting = "", GreetingType = (GreetingType)Enum.Parse(typeof(GreetingType), greetingType) });
+
+            }
+            else
+            {
+                server.GreetingType = (GreetingType)Enum.Parse(typeof(GreetingType), greetingType);
+
+            }
+            await _context.SaveServersChanges(_context);
+        }
+        public async Task ModifyGuildGreeting(ulong id, string greeting)
+        {
+            var server = await _context.Servers.FindAsync(id);
+            if (server == null)
+            {
+                _context.Add(new Server { Id = id, Prefix = "!", Greeting = "", GreetingType = GreetingType.Channel });
+
+            }
+            else
+            {
+                server.Greeting = greeting;
+
+            }
+            await _context.SaveServersChanges(_context);
+        }
+        public async Task ModifyGreetingChannelId(ulong id, ulong? channelId)
+        {
+            var server = await _context.Servers.FindAsync(id);
+            if (server == null)
+            {
+                _context.Add(new Server { Id = id, Prefix = "!", Greeting = "", GreetingType = GreetingType.Channel, GreetingChannelId = channelId });
+
+            }
+            else
+            {
+                server.GreetingChannelId = channelId;
+
+            }
+            await _context.SaveServersChanges(_context);
+        }
+        public async Task ModifyCommandsChannelId(ulong id, ulong? channelId)
+        {
+            var server = await _context.Servers.FindAsync(id);
+            if (server == null)
+            {
+                _context.Add(new Server { Id = id, Prefix = "!", Greeting = "", GreetingType = GreetingType.Channel, CommandChannelId = channelId });
+
+            }
+            else
+            {
+                server.CommandChannelId = channelId;
+
+            }
+            await _context.SaveServersChanges(_context);
+        }
+
     }
 }

@@ -5,13 +5,14 @@ using System.Threading.Tasks;
 using Discord.Commands;
 using Discord;
 using Discord.WebSocket;
-
 using Interactivity.Selection;
 using Victoria;
 using Victoria.Enums;
 using Interactivity;
 using Victoria.Payloads;
 using Interactivity.Pagination;
+using Victoria.Responses.Search;
+using Victoria.Filters;
 
 namespace AwesomeBot.Modules
 {
@@ -59,6 +60,7 @@ namespace AwesomeBot.Modules
             var voiceState = Context.User as IVoiceState;
             if (voiceState.VoiceChannel != null)
             {
+                
                 if (!_lavaNode.HasPlayer(Context.Guild))
                 {
                     await ReplyAsync("I'm not connected to a voice channel, joining a voice channel...");
@@ -69,20 +71,20 @@ namespace AwesomeBot.Modules
             }
             else
             { 
-                await ReplyAsync("You're not in a voice channel");
+                await ReplyAsync("You're not in a voice channel! Please join one to use this command.");
                 return;
             }
             
             
             var searchResponse = await _lavaNode.SearchYouTubeAsync(searchQuery);
-            if (searchResponse.LoadStatus == LoadStatus.LoadFailed ||
-                searchResponse.LoadStatus == LoadStatus.NoMatches)
+            if (searchResponse.Status == SearchStatus.LoadFailed ||
+                searchResponse.Status == SearchStatus.NoMatches)
             {
                 await ReplyAsync($"I wasn't able to find anything for `{searchQuery}`.");
                 return;
             }
 
-                        List<PageBuilder> pages = new List<PageBuilder>();
+            List<PageBuilder> pages = new List<PageBuilder>();
             int maxResults = 5;
             int pageCount = searchResponse.Tracks.Count / maxResults;
             try
@@ -228,7 +230,10 @@ namespace AwesomeBot.Modules
                     
                     await player.SkipAsync();
                 }
-                    //await ReplyAsync($"Skipped {player.Track.Title}");
+                else
+                {
+                    await ReplyAsync("Can't skip while looping!");
+                }
             }
             else
             {
@@ -245,18 +250,44 @@ namespace AwesomeBot.Modules
                 await ReplyAsync("I'm not connected to a voice channel.");
                 return;
             }
-            string stringBuilder = "";
-            int i = 0;
             if (player.Queue.Count > 0)
             {
-                foreach (var track in player.Queue)
+                List<PageBuilder> pages = new List<PageBuilder>();
+                int maxResults = 5;
+                
+                int pageCount = player.Queue.Count / maxResults;
+                try
                 {
-                    stringBuilder += $"\n [{i + 1}] {track.Title} ";
-                    i++;
+                    for (int i = 0; i < pageCount; i++)
+                    {
+                        var builder = new PageBuilder()
+                            .WithTitle($"Now Showing: Page {i + 1}")
+                            .WithDescription($"Queue, page {i + 1} of {pageCount}");
+                        for (int j = 0; j < maxResults; j++)
+                        {
+                            int number = j + (i * 5);
+                            var _track = player.Queue.ToList()[number];
+                            builder.AddField($"[{number + 1}] _{ _track.Title}_", _track.Url, false);
+                        }
+                        pages.Add(builder);
+                    }
                 }
-                var embed = new EmbedBuilder()
-                    .AddField("🎶 Now showing Queued songs: 🎶 ", stringBuilder, true);
-                await ReplyAsync(null, false, embed.Build());
+                catch (Exception e)
+                {
+                    Console.WriteLine("" + e);
+                }
+
+                var paginator = new StaticPaginatorBuilder()
+                    .WithUsers(Context.User as SocketUser)
+                    .WithPages(pages.ToArray())
+                    .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                    .WithDefaultEmotes()
+                    .Build();
+
+                //basically dont await this or you cant reply until
+                //the paginated message times out which is never
+
+                Interactivity.SendPaginatorAsync(paginator, Context.Channel);
             }
             else
             {

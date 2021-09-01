@@ -36,16 +36,49 @@ namespace AwesomeBot.Services
             _discord.Ready += onReadyAsync;
             _discord.MessageReceived += _discord_MessageReceived;
             _lavaNode.OnTrackEnded += _lavaNode_OnTrackEnded;
+            _discord.UserJoined += _discord_UserJoined;
 
             
 
         }
+
+        private async Task _discord_UserJoined(SocketGuildUser arg)
+        {
+            
+            ulong id = arg.Guild.Id;
+            var server = _servers.servers.Find(x => x.Id == id);
+            if (server == null)
+            {
+                await _servers.ModifyGuildGreeting(id, "");
+                await _servers.ModifyGuildGreetingType(id, "Disabled");
+                server = _servers.servers.Find(x => x.Id == id);
+
+            }
+            if (server.GreetingType == GreetingType.Disabled) return;
+
+            if (server.GreetingType == GreetingType.Channel)
+            {
+                await (arg.Guild.Channels.ToList().Find(x => x.Id == server.GreetingChannelId) as SocketTextChannel).SendMessageAsync(server.Greeting);
+                return;
+            }
+            if (server.GreetingType == GreetingType.DM) 
+            {
+                await arg.SendMessageAsync(server.Greeting);
+            }           
+
+        }
+
         private async Task _lavaNode_OnTrackEnded(Victoria.EventArgs.TrackEndedEventArgs arg)
         {
             Console.WriteLine("Track ended:" + arg.Reason);
 
             if (Modules.Media.isLooping)
             {
+                if (arg.Reason == Victoria.Enums.TrackEndReason.Stopped)
+                {
+                    Modules.Media.isLooping = false;
+                    return;
+                }
                 await arg.Player.PlayAsync(arg.Track);
             }
 
@@ -89,42 +122,57 @@ namespace AwesomeBot.Services
         private async Task _discord_MessageReceived(SocketMessage arg)
         {
             var msg = arg as SocketUserMessage;
-            ulong serverId = (msg.Channel as SocketGuildChannel).Guild.Id;
-            var server = _servers.servers.Find(x => x.Id == serverId);
-            string prefix = "";
-            if (server == null)
+
+            if (msg != null && !msg.Author.IsBot)
             {
-                await _servers.UpdatePrefix(serverId, "!");
-                server = _servers.servers.Find(x => x.Id == serverId);
+                ulong serverId = new ulong();
+                if (!(arg.Channel is IPrivateChannel))
+                {
+                    serverId = (msg.Channel as SocketGuildChannel).Guild.Id;
+                    var server = _servers.servers.Find(x => x.Id == serverId);
+                    if (server == null)
+                    {
+                        await _servers.ModifyGuildPrefix(serverId, "!");
+                        server = _servers.servers.Find(x => x.Id == serverId);
+                    }
+                    if (server.CommandChannelId != msg.Channel.Id && server.CommandChannelId != null)
+                    {
+                        var channel = msg.Channel as SocketGuildChannel;
+                        
+                        await msg.Channel.SendMessageAsync($"Please use commands in {channel.Guild.Channels.ToList().Find(x => x.Id == server.CommandChannelId).Name ?? channel.Guild.DefaultChannel.Name}");
+                        return;
+                    }
+                    string prefix = "";
+                    prefix = server.Prefix;
+                    var context = new SocketCommandContext(_discord, msg);
+                    int pos = 0;
+                    if (msg.HasStringPrefix(prefix, ref pos) || msg.HasMentionPrefix(_discord.CurrentUser, ref pos))
+                    {
+
+                        var result = await _command.ExecuteAsync(context, pos, _provider);
+                        if (!result.IsSuccess)
+                        {
+                            var reason = result.Error;
+                            string errorMessage = $"The following error occurred: \n {reason}";
+                            await context.Channel.SendMessageAsync(errorMessage);
+                            Console.WriteLine(errorMessage);
+
+
+                        }
+                        else
+                        {
+                            Console.WriteLine(result);
+                        }
+                    }
+                }
+                else
+                {
+                    await arg.Author.SendMessageAsync("DMs isn't implemented yet, sorry");
+                }
             }
-            prefix = server.Prefix;
-
-            if (msg != null)
+            else
             {
-                if (msg.Author.IsBot)
-                {
-                    return;
-                }
-
-                var context = new SocketCommandContext(_discord, msg);
-                int pos = 0;
-                if (msg.HasStringPrefix(prefix, ref pos) || msg.HasMentionPrefix(_discord.CurrentUser, ref pos))
-                {
-                    var result = await _command.ExecuteAsync(context, pos, _provider);
-                    if (!result.IsSuccess)
-                    {
-                        var reason = result.Error;
-                        string errorMessage = $"The following error occurred: \n {reason}";
-                        await context.Channel.SendMessageAsync(errorMessage);
-                        Console.WriteLine(errorMessage);
-
-
-                    }
-                    else
-                    {
-                        Console.WriteLine(result);
-                    }
-                }
+                Console.WriteLine("Message sent by server or bot");
             }
         }
         private async Task onReadyAsync()

@@ -169,7 +169,7 @@ namespace AwesomeBot.Modules
         }
         [Command("prefix")]
         [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task Prefix(string prefix = null)
+        public async Task Prefix([Remainder] string prefix = null)
         {
             if (prefix == null)
             {
@@ -182,10 +182,111 @@ namespace AwesomeBot.Modules
                 await ReplyAsync("Length of the new prefix is too long!");
                 return;
             }
-            await _servers.UpdatePrefix(Context.Guild.Id, prefix);
+            await _servers.ModifyGuildPrefix(Context.Guild.Id, prefix);
             await ReplyAsync($"The prefix has been changed to `{prefix}`");
 
             
+        }
+        [Command("greetingtype")]
+        [RequireUserPermission(GuildPermission.Administrator)]
+        public async Task SetGreetingTypeAsync([Remainder] string type = null)
+        {
+            if (type == null)
+            {
+                var _type = _servers.servers.Find(x => x.Id == Context.Guild.Id).GreetingType;
+                if (_type == GreetingType.Disabled)
+                {
+                    await ReplyAsync($"Greeting users is disabled");
+                    return;
+                }
+                await ReplyAsync($"Set to greet users in {_type}");
+
+
+            }
+            else 
+            {
+                try
+                {
+                    await _servers.ModifyGuildGreetingType(Context.Guild.Id, type);
+                    await ReplyAsync($"Updated greeting type to {type}");
+                } 
+                catch
+                {
+                    await ReplyAsync("Something went wrong, try again");
+                }
+
+            }
+        }
+        [Command("greeting")]
+        [RequireUserPermission(GuildPermission.Administrator, ErrorMessage = "Error: You do not have permission to use this command!")]
+        public async Task SetGreetingAsync([Remainder] string message = null)
+        {
+            if (message == null)
+            {
+                var _message = _servers.servers.Find(x => x.Id == Context.Guild.Id).Greeting ?? "No greeting set";
+                if (_servers.servers.Find(x => x.Id == Context.Guild.Id).GreetingType == GreetingType.Disabled)
+                {
+                    await ReplyAsync($"Greeting users is disabled");
+                    return;
+                }
+                await ReplyAsync($"Greeting is {_message}");
+            }
+            else
+            {
+                await _servers.ModifyGuildGreeting(Context.Guild.Id, message);
+            }
+        }
+        [Command("Greetingchannel")]
+        [RequireUserPermission(GuildPermission.Administrator, ErrorMessage = "Error: You do not have permission to use this command!")]
+        public async Task SetGreetingChannel([Remainder] string id = null)
+        {
+            if (id == null)
+            {
+                try
+                {
+                    var channel = Context.Guild.Channels.ToList().Find(x => x.Id == ulong.Parse(id)).Name;
+                    await ReplyAsync($"Channel for greeting is set to {channel ?? Context.Guild.DefaultChannel.Name}");
+                }
+                catch
+                {
+                    await ReplyAsync("Something went wrong");
+                }
+            }
+            else
+            {
+                try
+                {
+                    await _servers.ModifyGreetingChannelId(Context.Guild.Id, ulong.Parse(id));
+                }
+                catch
+                {
+                    await ReplyAsync("Please provide a valid channel id");
+                }
+            }
+        }
+        [Command("channel")]
+        [RequireUserPermission(GuildPermission.Administrator, ErrorMessage = "Error: You do not have permission to use this command!")]
+        public async Task SetCommandChannelId([Remainder] string id = null)
+        {
+            if (id == null)
+            {
+                var channelid = _servers.servers.Find(x => x.Id == Context.Guild.Id).CommandChannelId ?? Context.Guild.DefaultChannel.Id;
+                var channel = Context.Guild.Channels.ToList().Find(x => x.Id == channelid).Name;
+
+                await ReplyAsync($"Channel for commands is set to {channel ?? Context.Guild.DefaultChannel.Name}");
+            }
+            else
+            {
+                try
+                {
+                    await _servers.ModifyCommandsChannelId(Context.Guild.Id, ulong.Parse(id));
+                    await ReplyAsync($"Commands can now only be sent in {Context.Guild.Channels.ToList().Find(x => x.Id == _servers.servers.Find(x => x.Id == Context.Guild.Id).CommandChannelId)}");
+                }
+                catch
+                {
+                    await ReplyAsync("Please provide a valid channel id");
+                }
+            }
         }
     } 
 }

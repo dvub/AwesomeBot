@@ -62,8 +62,7 @@ namespace AwesomeBot
                 .AddDbContext<Context>()
                 .AddSingleton(AppSettingsRoot.IsCreated
                     ? AppSettingsRoot.Load()
-                    : AppSettingsRoot.Create())
-                .AddSingleton<Servers>();
+                    : AppSettingsRoot.Create());
                 
             
         }
