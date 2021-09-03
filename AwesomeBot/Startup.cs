@@ -8,7 +8,7 @@ using AwesomeBot.Services;
 using Victoria;
 using Interactivity ;
 using Infrastructure;
-using AwesomeBot.Core;
+using Core;
 using Infrastructure.Migrations;
 namespace AwesomeBot
 {
@@ -47,9 +47,10 @@ namespace AwesomeBot
             }))
                 .AddSingleton(new CommandService(new CommandServiceConfig
                 {
+                    
                     LogLevel = Discord.LogSeverity.Verbose,
                     DefaultRunMode = RunMode.Async,
-                    CaseSensitiveCommands = false
+                    CaseSensitiveCommands = false,
                 }))
                 .AddSingleton<CommandHandler>()
                 .AddSingleton<StartupService>()

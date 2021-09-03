@@ -428,7 +428,7 @@ namespace AwesomeBot.Modules
                 }
                 await player.EqualizerAsync(EQBands.ToArray());
 
-                await ReplyAsync($"Applied gain {_gain} to band {_band}");
+                await ReplyAsync($"Applied gain {_gain} to band {String.Join(", ", EQBands)}");
             }
             else
             {

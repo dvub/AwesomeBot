@@ -5,7 +5,7 @@ using Discord.Commands;
 using System.Diagnostics;
 using Discord.WebSocket;
 using System.IO;
-using AwesomeBot.Core;
+using Core;
 using System.Collections.Generic;
 
 namespace AwesomeBot.Services

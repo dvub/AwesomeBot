@@ -17,6 +17,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Core", "Core\Core.csproj", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Victoria", "..\Packages\Victoria-5\src\Victoria.csproj", "{F6CA8834-BE68-4666-B2B6-54F434AFC790}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{7EAB89F1-18E5-4C08-AC1C-2BF1C29F27CA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Common\Common.csproj", "{95692DFF-7D85-4C07-A8E2-CEAB74605D1A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +43,10 @@ Global
 		{F6CA8834-BE68-4666-B2B6-54F434AFC790}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F6CA8834-BE68-4666-B2B6-54F434AFC790}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F6CA8834-BE68-4666-B2B6-54F434AFC790}.Release|Any CPU.Build.0 = Release|Any CPU
+		{95692DFF-7D85-4C07-A8E2-CEAB74605D1A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{95692DFF-7D85-4C07-A8E2-CEAB74605D1A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{95692DFF-7D85-4C07-A8E2-CEAB74605D1A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{95692DFF-7D85-4C07-A8E2-CEAB74605D1A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -47,6 +55,7 @@ Global
 		{4B7CF0D0-6C10-4DC2-A1B2-DA5BF8FBAF1E} = {2A879576-DB79-4483-80BA-F942DFBDBD15}
 		{837CC3F9-EC53-4BB6-B546-9C43E694D9EE} = {AEE7EA50-910C-492C-9965-1795613C1E31}
 		{9E6B282C-227B-40DA-B366-9140C7E6EB71} = {31DCDAA4-7BC7-4EE7-87C2-38A327D80C82}
+		{95692DFF-7D85-4C07-A8E2-CEAB74605D1A} = {7EAB89F1-18E5-4C08-AC1C-2BF1C29F27CA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E952B976-7D4F-4B46-BC99-5BCDEDAE7795}

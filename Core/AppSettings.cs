@@ -8,7 +8,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.IO;
 
-namespace AwesomeBot.Core
+namespace Core
 {
     //Thanks to HueByte for letting me use his AppSettings class
     //and helping me out so much

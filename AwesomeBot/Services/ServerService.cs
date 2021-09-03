@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using AwesomeBot.Core;
+using Core;
 
 namespace AwesomeBot.Services
 {

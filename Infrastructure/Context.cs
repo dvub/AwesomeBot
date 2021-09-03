@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using AwesomeBot.Core;
+using Core;
 using System.Collections.Generic;
 using System;
 using System.Threading.Tasks;

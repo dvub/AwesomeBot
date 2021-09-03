@@ -7,8 +7,10 @@ using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
-using AwesomeBot.Common;
+using Common;
+using Common.Extensions; 
 using Victoria;
+using Common.Types;
 using Infrastructure;
 
 namespace AwesomeBot.Services
@@ -37,9 +39,13 @@ namespace AwesomeBot.Services
             _discord.MessageReceived += _discord_MessageReceived;
             _lavaNode.OnTrackEnded += _lavaNode_OnTrackEnded;
             _discord.UserJoined += _discord_UserJoined;
+            _command.CommandExecuted += _command_CommandExecuted;
 
-            
+        }
 
+        private async Task _command_CommandExecuted(Optional<CommandInfo> arg1, ICommandContext arg2, IResult arg3)
+        {
+            Console.WriteLine("A command was executed");
         }
 
         private async Task _discord_UserJoined(SocketGuildUser arg)
@@ -54,17 +60,17 @@ namespace AwesomeBot.Services
                 server = _servers.servers.Find(x => x.Id == id);
 
             }
-            if (server.GreetingType == GreetingType.Disabled) return;
-
-            if (server.GreetingType == GreetingType.Channel)
+            switch (server.GreetingType)
             {
-                await (arg.Guild.Channels.ToList().Find(x => x.Id == server.GreetingChannelId) as SocketTextChannel).SendMessageAsync(server.Greeting);
-                return;
-            }
-            if (server.GreetingType == GreetingType.DM) 
-            {
-                await arg.SendMessageAsync(server.Greeting);
-            }           
+                case GreetingType.Channel:
+                    await (arg.Guild.Channels.ToList().Find(x => x.Id == server.GreetingChannelId) as SocketTextChannel).SendMessageAsync(server.Greeting);
+                    return;
+                case GreetingType.DM:
+                    await arg.SendMessageAsync(server.Greeting);
+                    return;
+                case GreetingType.Disabled:
+                    return;
+            }         
 
         }
 

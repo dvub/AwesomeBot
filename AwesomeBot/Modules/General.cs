@@ -6,10 +6,12 @@ using System.Threading.Tasks;
 using Discord.Commands;
 using Discord;
 using Discord.WebSocket;
+using System.Threading;
 using AwesomeBot.Services;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Infrastructure;
+using Common.Extensions;
 
 namespace AwesomeBot.Modules
 {
@@ -19,13 +21,22 @@ namespace AwesomeBot.Modules
         CommandService _commandService;
         private readonly ServerService _servers;
         string timeFormat = "MM/dd/yyyy";
-
+        Dictionary<string, string> symbolDictionary;
         public General(CommandService commandService, ServerService serverService)
         {
+            symbolDictionary = new Dictionary<string, string>();
+            ConfigureDictionary(symbolDictionary);
             _commandService = commandService;
             _servers = serverService;
         }
-
+        public void ConfigureDictionary(Dictionary<string, string> dictionary)
+        {
+            
+            dictionary.Add("General", "📈");
+            dictionary.Add("Admin", "⚖️");
+            dictionary.Add("Media", "🎶");
+            dictionary.Add("Configuration", "🔧");
+        }
         
         [Command("help")]
         [Alias("commands")]
@@ -33,22 +44,18 @@ namespace AwesomeBot.Modules
         public async Task Help(string moduleName = null, string commandName = null)
         {
             List<ModuleInfo> modules = _commandService.Modules.ToList();
-
-            string symbol = "";
+            var prefix =  _servers.servers.Find(x => x.Id == Context.Guild.Id).Prefix;
             if (moduleName == null)
             {
 
                 EmbedBuilder builder = new EmbedBuilder()
                     
                     .WithDescription("Displays commands and what they do.");
-                
+
                 foreach (ModuleInfo _module in modules)
                 {
-                    if (_module.Name == "General") symbol = "📈";
-                    if (_module.Name == "Admin") symbol = "⚖️";
-                    if (_module.Name == "Media") symbol = "🎶";
-                    string embedFieldText = _module.Summary ?? "\n No information available for this command";
-                    builder.AddField(symbol + " " + _module.Name, embedFieldText);
+                    string embedFieldText = _module.Summary.CapitalizeFirst() ?? "\n No information available for this command";
+                    builder.AddField(symbolDictionary[_module.Name] + " " + _module.Name, embedFieldText);
                 }
                 var embed = builder.Build();
 
@@ -57,18 +64,16 @@ namespace AwesomeBot.Modules
             }
             else
             {
-                var module = modules[modules.FindIndex(x => x.Name == moduleName)];
+                var module = modules.Find(x => x.Name.Equals(moduleName, StringComparison.InvariantCultureIgnoreCase));
                 if (commandName == null)
                 {
                     if (modules.Contains(module))
                     {
-                        if (module.Name == "General") symbol = "📈";
-                        if (module.Name == "Admin") symbol = "⚖️";
-                        if (module.Name == "Media") symbol = "🎶";
+                        
                         EmbedBuilder builder = new EmbedBuilder()
-                            .AddField(symbol + " " + moduleName, module.Summary)
-                            .AddField("_Commands:_", string.Join(", ", module.Commands.ToList()
-                                .Select(x => x.Name)));
+                            .AddField(symbolDictionary[module.Name] + " " + moduleName, module.Summary.CapitalizeFirst())
+                            
+                            .AddField("_Commands:_", string.Join($", ", module.Commands.ToList().Select(x => x.Name).ToList().CapitalizeStringList()));
                                 
                         var embed = builder.Build();
                         await ReplyAsync(null, false, embed);
@@ -81,15 +86,13 @@ namespace AwesomeBot.Modules
                 }
                 else
                 {
-                    var command = module.Commands[module.Commands.ToList().FindIndex(x => x.Name == commandName)];
+                    var command = module.Commands.ToList().Find(x => x.Name.Equals(commandName, StringComparison.InvariantCultureIgnoreCase));
                     if (module.Commands.ToList().Contains(command))
                     {
-                        if (module.Name == "General") symbol = "📈";
-                        if (module.Name == "Admin") symbol = "⚖️";
-                        if (module.Name == "Media") symbol = "🎶";
+                       
                         EmbedBuilder builder = new EmbedBuilder()
-                            .AddField(symbol + " " + commandName, command.Summary)
-                            .AddField("_Aliases:_", string.Join(", ", command.Aliases.ToList()));
+                            .AddField(symbolDictionary[module.Name] + " " + commandName, command.Summary.CapitalizeFirst())
+                            .AddField("_Aliases:_", string.Join($", ", command.Aliases.ToList().CapitalizeStringList()));
                         await ReplyAsync(null, false, builder.Build());
                     }
                     else
@@ -167,126 +170,6 @@ namespace AwesomeBot.Modules
             await ReplyAsync(null, false, embed);
 
         }
-        [Command("prefix")]
-        [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task Prefix([Remainder] string prefix = null)
-        {
-            if (prefix == null)
-            {
-                var GuildPrefix = _servers.servers.Find(x => x.Id == Context.Guild.Id).Prefix;
-                await ReplyAsync($"The current prefix for this bot is `{GuildPrefix}`");
-                return;
-            }
-            if (prefix.Length > 8)
-            {
-                await ReplyAsync("Length of the new prefix is too long!");
-                return;
-            }
-            await _servers.ModifyGuildPrefix(Context.Guild.Id, prefix);
-            await ReplyAsync($"The prefix has been changed to `{prefix}`");
 
-            
-        }
-        [Command("greetingtype")]
-        [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task SetGreetingTypeAsync([Remainder] string type = null)
-        {
-            if (type == null)
-            {
-                var _type = _servers.servers.Find(x => x.Id == Context.Guild.Id).GreetingType;
-                if (_type == GreetingType.Disabled)
-                {
-                    await ReplyAsync($"Greeting users is disabled");
-                    return;
-                }
-                await ReplyAsync($"Set to greet users in {_type}");
-
-
-            }
-            else 
-            {
-                try
-                {
-                    await _servers.ModifyGuildGreetingType(Context.Guild.Id, type);
-                    await ReplyAsync($"Updated greeting type to {type}");
-                } 
-                catch
-                {
-                    await ReplyAsync("Something went wrong, try again");
-                }
-
-            }
-        }
-        [Command("greeting")]
-        [RequireUserPermission(GuildPermission.Administrator, ErrorMessage = "Error: You do not have permission to use this command!")]
-        public async Task SetGreetingAsync([Remainder] string message = null)
-        {
-            if (message == null)
-            {
-                var _message = _servers.servers.Find(x => x.Id == Context.Guild.Id).Greeting ?? "No greeting set";
-                if (_servers.servers.Find(x => x.Id == Context.Guild.Id).GreetingType == GreetingType.Disabled)
-                {
-                    await ReplyAsync($"Greeting users is disabled");
-                    return;
-                }
-                await ReplyAsync($"Greeting is {_message}");
-            }
-            else
-            {
-                await _servers.ModifyGuildGreeting(Context.Guild.Id, message);
-            }
-        }
-        [Command("Greetingchannel")]
-        [RequireUserPermission(GuildPermission.Administrator, ErrorMessage = "Error: You do not have permission to use this command!")]
-        public async Task SetGreetingChannel([Remainder] string id = null)
-        {
-            if (id == null)
-            {
-                try
-                {
-                    var channel = Context.Guild.Channels.ToList().Find(x => x.Id == ulong.Parse(id)).Name;
-                    await ReplyAsync($"Channel for greeting is set to {channel ?? Context.Guild.DefaultChannel.Name}");
-                }
-                catch
-                {
-                    await ReplyAsync("Something went wrong");
-                }
-            }
-            else
-            {
-                try
-                {
-                    await _servers.ModifyGreetingChannelId(Context.Guild.Id, ulong.Parse(id));
-                }
-                catch
-                {
-                    await ReplyAsync("Please provide a valid channel id");
-                }
-            }
-        }
-        [Command("channel")]
-        [RequireUserPermission(GuildPermission.Administrator, ErrorMessage = "Error: You do not have permission to use this command!")]
-        public async Task SetCommandChannelId([Remainder] string id = null)
-        {
-            if (id == null)
-            {
-                var channelid = _servers.servers.Find(x => x.Id == Context.Guild.Id).CommandChannelId ?? Context.Guild.DefaultChannel.Id;
-                var channel = Context.Guild.Channels.ToList().Find(x => x.Id == channelid).Name;
-
-                await ReplyAsync($"Channel for commands is set to {channel ?? Context.Guild.DefaultChannel.Name}");
-            }
-            else
-            {
-                try
-                {
-                    await _servers.ModifyCommandsChannelId(Context.Guild.Id, ulong.Parse(id));
-                    await ReplyAsync($"Commands can now only be sent in {Context.Guild.Channels.ToList().Find(x => x.Id == _servers.servers.Find(x => x.Id == Context.Guild.Id).CommandChannelId)}");
-                }
-                catch
-                {
-                    await ReplyAsync("Please provide a valid channel id");
-                }
-            }
-        }
-    } 
+    }
 }
