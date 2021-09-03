@@ -26,7 +26,7 @@ namespace Infrastructure
         public DbSet<Server> Servers { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            string connectionString = "server=localhost;user=root;database=awesomebot;port=3306;Connection Timeout=5;"; //"server =localhost;user=root;database=awesomebot;port=3306;Connection Timeout=5;"
+            string connectionString = _config.ConnectionString;
             var serverVersion = ServerVersion.AutoDetect(connectionString);
             optionsBuilder.UseMySql(connectionString, serverVersion);
         }

@@ -15,6 +15,9 @@ using Infrastructure;
 
 namespace AwesomeBot.Services
 {
+    //TODO: LOGGING
+    //  (MAKE IT GOOD)
+
     public class CommandHandler
     {
         public static IServiceProvider _provider;
