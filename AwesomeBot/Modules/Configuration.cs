@@ -11,6 +11,7 @@ using AwesomeBot.Services;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Infrastructure;
+using Serilog;
 
 namespace AwesomeBot.Modules
 {
@@ -38,8 +39,15 @@ namespace AwesomeBot.Modules
                 await ReplyAsync("Length of the new prefix is too long!");
                 return;
             }
-            await _servers.ModifyGuildPrefix(Context.Guild.Id, prefix);
-            await ReplyAsync($"The prefix has been changed to `{prefix}`");
+            try
+            {
+                await _servers.ModifyGuildPrefix(Context.Guild.Id, prefix);
+                await ReplyAsync($"The prefix has been changed to `{prefix}`");
+            }
+            catch (Exception e)
+            {
+                Log.Error($"An error occurred:\n{e}");
+            }
 
         }
         [Command("greetingtype")]
@@ -65,9 +73,10 @@ namespace AwesomeBot.Modules
                     await _servers.ModifyGuildGreetingType(Context.Guild.Id, type);
                     await ReplyAsync($"Updated greeting type to {type}");
                 }
-                catch
+                catch (Exception e)
                 {
                     await ReplyAsync("Something went wrong, try again");
+                    Log.Error($"An error occurred:\n{e}");
                 }
 
             }
@@ -105,9 +114,10 @@ namespace AwesomeBot.Modules
                     var channel = Context.Guild.Channels.ToList().Find(x => x.Id == ulong.Parse(id)).Name;
                     await ReplyAsync($"Channel for greeting is set to {channel ?? Context.Guild.DefaultChannel.Name}");
                 }
-                catch
+                catch (Exception e)
                 {
                     await ReplyAsync("Something went wrong");
+                    Log.Error($"An error occurred:\n{e}");
                 }
             }
             else
@@ -116,9 +126,10 @@ namespace AwesomeBot.Modules
                 {
                     await _servers.ModifyGreetingChannelId(Context.Guild.Id, ulong.Parse(id));
                 }
-                catch
+                catch (Exception e)
                 {
                     await ReplyAsync("Please provide a valid channel id");
+                    Log.Error($"An error occurred:\n{e}");
                 }
             }
         }
@@ -141,9 +152,10 @@ namespace AwesomeBot.Modules
                     await _servers.ModifyCommandsChannelId(Context.Guild.Id, ulong.Parse(id));
                     await ReplyAsync($"Commands can now only be sent in {Context.Guild.Channels.ToList().Find(x => x.Id == _servers.servers.Find(x => x.Id == Context.Guild.Id).CommandChannelId)}");
                 }
-                catch
+                catch (Exception e)
                 {
                     await ReplyAsync("Please provide a valid channel id");
+                    Log.Error($"An error occurred:\n{e}");
                 }
             }
         }

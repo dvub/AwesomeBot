@@ -10,6 +10,7 @@ using Interactivity;
 using Infrastructure;
 using Core;
 using Infrastructure.Migrations;
+using Serilog;
 namespace AwesomeBot
 {
     public class Startup
@@ -24,6 +25,7 @@ namespace AwesomeBot
             var startup = new Startup(args);
 
             await startup.RunAsync();
+            
         }
         //startup method with no args
         public async Task RunAsync()

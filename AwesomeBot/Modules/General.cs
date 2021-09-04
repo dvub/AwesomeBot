@@ -12,7 +12,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using Infrastructure;
 using Common.Extensions;
-
+using Serilog;
 namespace AwesomeBot.Modules
 {
     [Summary("get information!")]
@@ -47,7 +47,7 @@ namespace AwesomeBot.Modules
             var prefix = _servers.servers.Find(x => x.Id == Context.Guild.Id).Prefix;
             if (moduleName == null)
             {
-
+                
                 EmbedBuilder builder = new EmbedBuilder()
 
                     .WithDescription("Displays commands and what they do.");
@@ -64,42 +64,37 @@ namespace AwesomeBot.Modules
             }
             else
             {
+
                 var module = modules.Find(x => x.Name.Equals(moduleName, StringComparison.InvariantCultureIgnoreCase));
                 if (commandName == null)
                 {
-                    if (modules.Contains(module))
+                    try
                     {
-
                         EmbedBuilder builder = new EmbedBuilder()
                             .AddField(symbolDictionary[module.Name] + " " + moduleName, module.Summary.CapitalizeFirst())
-
                             .AddField("_Commands:_", string.Join($", ", module.Commands.ToList().Select(x => $"`{x.Name}`").ToList().LowerStringList()));
-
-
                         var embed = builder.Build();
                         await ReplyAsync(null, false, embed);
-
                     }
-                    else
+                    catch (Exception e)
                     {
-                        await ReplyAsync("that module does not exist.");
+                        Log.Error($"An error occurred:\n{e}");
                     }
                 }
                 else
                 {
-                    var command = module.Commands.ToList().Find(x => x.Name.Equals(commandName, StringComparison.InvariantCultureIgnoreCase));
-                    if (module.Commands.ToList().Contains(command))
+                    try
                     {
-
+                        var command = module.Commands.ToList().Find(x => x.Name.Equals(commandName, StringComparison.InvariantCultureIgnoreCase));
                         EmbedBuilder builder = new EmbedBuilder()
                             .AddField(symbolDictionary[module.Name] + " " + commandName, command.Summary.CapitalizeFirst())
                             .AddField("_Aliases:_", string.Join($", ", command.Aliases.ToList().LowerStringList()))
                             .AddField("_Usage:_", $"`{prefix}{command.Name} {string.Join(" ", command.Parameters.ToList().Select(x => $"<{x.Name}>"))}`");
                         await ReplyAsync(null, false, builder.Build());
                     }
-                    else
+                    catch (Exception e)
                     {
-                        await ReplyAsync("that command does not exist.");
+                        Log.Error($"An error occurred:\n{e}");
                     }
                 }
 

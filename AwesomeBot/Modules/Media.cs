@@ -13,6 +13,7 @@ using Victoria.Payloads;
 using Interactivity.Pagination;
 using Victoria.Responses.Search;
 using Victoria.Filters;
+using Serilog;
 
 namespace AwesomeBot.Modules
 {
@@ -59,43 +60,43 @@ namespace AwesomeBot.Modules
 
         public async Task PlayAsync([Remainder] string searchQuery)
         {
-
-            if (string.IsNullOrWhiteSpace(searchQuery))
-            {
-                await ReplyAsync("Please provide search terms.");
-                return;
-            }
-            var voiceState = Context.User as IVoiceState;
-            if (voiceState.VoiceChannel != null)
-            {
-
-                if (!_lavaNode.HasPlayer(Context.Guild))
-                {
-                    await ReplyAsync("I'm not connected to a voice channel, joining a voice channel...");
-                    await _lavaNode.JoinAsync(voiceState.VoiceChannel, Context.Channel as ITextChannel);
-                    await ReplyAsync($"Joined **{voiceState.VoiceChannel.Name}**!");
-
-                }
-            }
-            else
-            {
-                await ReplyAsync("You're not in a voice channel! Please join one to use this command.");
-                return;
-            }
-
-            var searchResponse = await _lavaNode.SearchYouTubeAsync(searchQuery);
-            if (searchResponse.Status == SearchStatus.LoadFailed ||
-              searchResponse.Status == SearchStatus.NoMatches)
-            {
-                await ReplyAsync($"I wasn't able to find anything for `{searchQuery}`.");
-                return;
-            }
-
-            List<PageBuilder> pages = new List<PageBuilder>();
-            int maxResults = 5;
-            int pageCount = searchResponse.Tracks.Count / maxResults;
             try
             {
+                if (string.IsNullOrWhiteSpace(searchQuery))
+                {
+                    await ReplyAsync("Please provide search terms.");
+                    return;
+                }
+                var voiceState = Context.User as IVoiceState;
+                if (voiceState.VoiceChannel != null)
+                {
+
+                    if (!_lavaNode.HasPlayer(Context.Guild))
+                    {
+                        await ReplyAsync("I'm not connected to a voice channel, joining a voice channel...");
+                        await _lavaNode.JoinAsync(voiceState.VoiceChannel, Context.Channel as ITextChannel);
+                        await ReplyAsync($"Joined **{voiceState.VoiceChannel.Name}**!");
+
+                    }
+                }
+                else
+                {
+                    await ReplyAsync("You're not in a voice channel! Please join one to use this command.");
+                    return;
+                }
+
+                var searchResponse = await _lavaNode.SearchYouTubeAsync(searchQuery);
+                if (searchResponse.Status == SearchStatus.LoadFailed ||
+                  searchResponse.Status == SearchStatus.NoMatches)
+                {
+                    await ReplyAsync($"I wasn't able to find anything for `{searchQuery}`.");
+                    return;
+                }
+
+                List<PageBuilder> pages = new List<PageBuilder>();
+                int maxResults = 5;
+                int pageCount = searchResponse.Tracks.Count / maxResults;
+
                 for (int i = 0; i < pageCount; i++)
                 {
                     var builder = new PageBuilder()
@@ -109,72 +110,74 @@ namespace AwesomeBot.Modules
                     }
                     pages.Add(builder);
                 }
+
+                var paginator = new StaticPaginatorBuilder()
+                  .WithUsers(Context.User as SocketUser)
+                  .WithPages(pages.ToArray())
+                  .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                  .WithDefaultEmotes()
+                  .Build();
+
+                //basically dont await this or you cant reply until
+                //the paginated message times out which is never
+
+                Interactivity.SendPaginatorAsync(paginator, Context.Channel);
+                var response = await Interactivity.NextMessageAsync(x => x.Author == Context.User);
+                int song = 0;
+                    song = int.Parse(response.Value.Content) - 1;
+
+                if (!_lavaNode.TryGetPlayer(Context.Guild, out
+                    var player))
+                {
+                    await ReplyAsync("I'm not connected to a voice channel.");
+                    return;
+                }
+                var track = searchResponse.Tracks.ToList()[song];
+                if (player.PlayerState == PlayerState.Playing || player.PlayerState == PlayerState.Paused)
+                {
+                    player.Queue.Enqueue(track);
+                    await ReplyAsync($"🎶 Queued: **_{track.Title}_**");
+                }
+                else
+                {
+                    await player.PlayAsync(track);
+                    await ReplyAsync($"🎶 Now playing: **_{track.Title}_**");
+                }
             }
             catch (Exception e)
             {
-                Console.WriteLine("" + e);
+                Log.Error($"An error occurred\n{e}");
             }
-
-            var paginator = new StaticPaginatorBuilder()
-              .WithUsers(Context.User as SocketUser)
-              .WithPages(pages.ToArray())
-              .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
-              .WithDefaultEmotes()
-              .Build();
-
-            //basically dont await this or you cant reply until
-            //the paginated message times out which is never
-
-            Interactivity.SendPaginatorAsync(paginator, Context.Channel);
-            var response = await Interactivity.NextMessageAsync(x => x.Author == Context.User);
-            int song = 0;
-            try
-            {
-                song = int.Parse(response.Value.Content) - 1;
-            }
-            catch
-            {
-                await ReplyAsync("Please enter a number!");
-                return;
-            }
-            if (!_lavaNode.TryGetPlayer(Context.Guild, out
-                var player))
-            {
-                await ReplyAsync("I'm not connected to a voice channel.");
-                return;
-            }
-            var track = searchResponse.Tracks.ToList()[song];
-            if (player.PlayerState == PlayerState.Playing || player.PlayerState == PlayerState.Paused)
-            {
-                player.Queue.Enqueue(track);
-                await ReplyAsync($"🎶 Queued: **_{track.Title}_**");
-            }
-            else
-            {
-                await player.PlayAsync(track);
-                await ReplyAsync($"🎶 Now playing: **_{track.Title}_**");
-            }
+            
         }
         [Command("pause")]
         [Summary("pause a currently playing song")]
         public async Task PauseAsync()
         {
-            if (!_lavaNode.TryGetPlayer(Context.Guild, out
-                var player))
+            try
             {
-                await ReplyAsync("I'm not connected to a voice channel.");
-                return;
-            }
-            if (player.PlayerState == PlayerState.Paused)
-            {
-                await ReplyAsync("Already paused!");
-            }
-            else
-            {
-                await player.PauseAsync();
-                await ReplyAsync($"🎶 Paused **_{player.Track.Title}_**");
+                if (!_lavaNode.TryGetPlayer(Context.Guild, out
+                    var player))
+                {
+                    await ReplyAsync("I'm not connected to a voice channel.");
+                    return;
+                }
+                if (player.PlayerState == PlayerState.Paused)
+                {
+                    await ReplyAsync("Already paused!");
+                }
+                else
+                {
+                    await player.PauseAsync();
+                    await ReplyAsync($"🎶 Paused **_{player.Track.Title}_**");
 
+                }
             }
+            catch (Exception e)
+            {
+                Log.Error($"An error occurred\n{e}");
+            }
+
         }
         [Command("resume")]
         [Summary("resume a song if it is paused")]
@@ -229,28 +232,36 @@ namespace AwesomeBot.Modules
         [Summary("skips current song.")]
         public async Task SkipAsync()
         {
-            if (!_lavaNode.TryGetPlayer(Context.Guild, out
-                var player))
+            try
             {
-                await ReplyAsync("I'm not connected to a voice channel.");
-                return;
-            }
-            if (!(player.Queue.Count == 0))
-            {
-                if (!isLooping)
+                if (!_lavaNode.TryGetPlayer(Context.Guild, out
+                    var player))
                 {
+                    await ReplyAsync("I'm not connected to a voice channel.");
+                    return;
+                }
+                if (!(player.Queue.Count == 0))
+                {
+                    if (!isLooping)
+                    {
 
-                    await player.SkipAsync();
+                        await player.SkipAsync();
+                    }
+                    else
+                    {
+                        await ReplyAsync("Can't skip while looping!");
+                    }
                 }
                 else
                 {
-                    await ReplyAsync("Can't skip while looping!");
+                    await ReplyAsync("Nothing in the queue, can't skip.");
                 }
             }
-            else
+            catch (Exception e)
             {
-                await ReplyAsync("Nothing in the queue, can't skip.");
+                Log.Error($"An error occurred\n{e}");
             }
+
         }
         [Command("Queue")]
         [Alias("q")]
@@ -287,7 +298,7 @@ namespace AwesomeBot.Modules
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("" + e);
+                    Log.Error($"An error occurred\n{e}");
                 }
 
                 var paginator = new StaticPaginatorBuilder()
@@ -326,31 +337,38 @@ namespace AwesomeBot.Modules
         [Summary("Sets volume for bot")]
         public async Task SetVolumeAsync(int volume)
         {
-
-            if (!_lavaNode.TryGetPlayer(Context.Guild, out
-                var player))
+            try
             {
-                await ReplyAsync("I'm not connected to a voice channel.");
-                return;
-            }
-            if (volume <= 200 && volume > 0)
-            {
-                await player.UpdateVolumeAsync(Convert.ToUInt16(volume));
-                await ReplyAsync($"Set volume to **_{Convert.ToUInt16(volume)}_**");
-
-            }
-            else
-            {
-                if (volume > 200)
+                if (!_lavaNode.TryGetPlayer(Context.Guild, out
+    var player))
                 {
-                    await ReplyAsync("Number is too high");
+                    await ReplyAsync("I'm not connected to a voice channel.");
+                    return;
                 }
-                else if (volume <= 0)
+                if (volume <= 200 && volume > 0)
                 {
-                    await ReplyAsync("Number is too low");
+                    await player.UpdateVolumeAsync(Convert.ToUInt16(volume));
+                    await ReplyAsync($"Set volume to **_{Convert.ToUInt16(volume)}_**");
 
                 }
+                else
+                {
+                    if (volume > 200)
+                    {
+                        await ReplyAsync("Number is too high");
+                    }
+                    else if (volume <= 0)
+                    {
+                        await ReplyAsync("Number is too low");
+
+                    }
+                }
             }
+            catch (Exception e)
+            {
+                Log.Error($"An error occurred\n{e}");
+            }
+
 
         }
         [Command("Seek")]
@@ -365,28 +383,28 @@ namespace AwesomeBot.Modules
                 hours = int.Parse(time.Substring(0, 2));
                 minutes = int.Parse(time.Substring(3, 2));
                 seconds = int.Parse(time.Substring(6, 2));
-            }
-            catch
-            {
-                await ReplyAsync("Time was not in correct format. Please use HH:MM:SS");
-                return;
-            }
 
-            if (!_lavaNode.TryGetPlayer(Context.Guild, out
-                var player))
-            {
-                await ReplyAsync("I'm not connected to a voice channel.");
-                return;
-            }
-            TimeSpan seekPosition = new TimeSpan(hours, minutes, seconds);
-            if (seekPosition > player.Track.Duration)
-            {
-                await ReplyAsync("Cannot seek past song duration.");
-                return;
-            }
 
-            await player.SeekAsync(seekPosition);
-            await ReplyAsync($"Playing from **_{hours}:{minutes}:{seconds}._**");
+                if (!_lavaNode.TryGetPlayer(Context.Guild, out
+                    var player))
+                {
+                    await ReplyAsync("I'm not connected to a voice channel.");
+                    return;
+                }
+                TimeSpan seekPosition = new TimeSpan(hours, minutes, seconds);
+                if (seekPosition > player.Track.Duration)
+                {
+                    await ReplyAsync("Cannot seek past song duration.");
+                    return;
+                }
+
+                await player.SeekAsync(seekPosition);
+                await ReplyAsync($"Playing from **_{hours}:{minutes}:{seconds}._**");
+            }
+            catch (Exception e) 
+            {
+                Log.Error($"An error occurred:\n{e}");
+            }
         }
 
         [Command("nowplaying")]
@@ -409,21 +427,21 @@ namespace AwesomeBot.Modules
         [Alias("eq")]
         public async Task EqualizeAsync(string band, [Remainder] string gain)
         {
-            int _band = 0;
-            int _gain = 0;
-            List<EqualizerBand> EQBands = new List<EqualizerBand>();
-            if (!_lavaNode.TryGetPlayer(Context.Guild, out
-                var player))
+            try
             {
-                await ReplyAsync("I'm not connected to a voice channel.");
-                return;
-            }
-            if (band.Contains("-"))
-            {
-                string[] bands = band.Split("-");
-
-                try
+                int _band = 0;
+                int _gain = 0;
+                List<EqualizerBand> EQBands = new List<EqualizerBand>();
+                if (!_lavaNode.TryGetPlayer(Context.Guild, out
+                    var player))
                 {
+                    await ReplyAsync("I'm not connected to a voice channel.");
+                    return;
+                }
+                if (band.Contains("-"))
+                {
+                    string[] bands = band.Split("-");
+
                     _gain = int.Parse(gain);
                     int first = int.Parse(bands[0]);
                     int second = int.Parse(bands[1]);
@@ -435,44 +453,36 @@ namespace AwesomeBot.Modules
                         EQBands.Add(new EqualizerBand(i + first, output));
                     }
 
-                }
-                catch (ArgumentException e)
-                {
-                    await ReplyAsync($"Error occurred: {e}");
-                    return;
-                }
-                await player.EqualizerAsync(EQBands.ToArray());
+                    await player.EqualizerAsync(EQBands.ToArray());
 
-                await ReplyAsync($"Applied gain **_{_gain}_** to bands **_({String.Join(", ", EQBands.Select(x => x.Band))})_**");
-            }
-            else
-            {
-                try
+                    await ReplyAsync($"Applied gain **_{_gain}_** to bands **_({String.Join(", ", EQBands.Select(x => x.Band))})_**");
+                }
+                else
                 {
+
                     _band = int.Parse(band);
                     _gain = int.Parse(gain) + 1;
 
-                }
-                catch (ArgumentException e)
-                {
-                    await ReplyAsync($"Error occurred: {e}");
-                    return;
-                }
-                if (!(_gain >= -100 && _gain <= 100))
-                {
-                    await ReplyAsync("Enter a gain value from `-100 - 100`");
-                    return;
-                }
-                if (!(_band > 0 && _band < 16))
-                {
-                    await ReplyAsync("Enter a band value from `0 - 15`");
-                    return;
-                }
-                double slope = (-0.25f - 1) / (-100 - 100);
-                double output = -0.25f + slope * (_gain - -100);
-                await player.EqualizerAsync(new EqualizerBand(_band, output));
+                    if (!(_gain >= -100 && _gain <= 100))
+                    {
+                        await ReplyAsync("Enter a gain value from `-100 - 100`");
+                        return;
+                    }
+                    if (!(_band > 0 && _band < 16))
+                    {
+                        await ReplyAsync("Enter a band value from `0 - 15`");
+                        return;
+                    }
+                    double slope = (-0.25f - 1) / (-100 - 100);
+                    double output = -0.25f + slope * (_gain - -100);
+                    await player.EqualizerAsync(new EqualizerBand(_band, output));
 
-                await ReplyAsync($"Applied gain **_{_gain}_** to band **_{_band}_**");
+                    await ReplyAsync($"Applied gain **_{_gain}_** to band **_{_band}_**");
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Error($"An error occurred\n{e}");
             }
         }
     }

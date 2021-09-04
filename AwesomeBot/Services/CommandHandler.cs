@@ -12,6 +12,7 @@ using Common.Extensions;
 using Victoria;
 using Common.Types;
 using Infrastructure;
+using Serilog;
 
 namespace AwesomeBot.Services
 {
@@ -30,9 +31,9 @@ namespace AwesomeBot.Services
         private readonly LavaNode _lavaNode;
         public static List<Mute> Mutes = new List<Mute>();
         private readonly ServerService _servers;
-
         public CommandHandler(DiscordSocketClient discord, CommandService commands, IServiceProvider provider, LavaNode lavaNode, ServerService servers)
         {
+            AppDomain.CurrentDomain.ProcessExit += new EventHandler(CurrentDomain_ProcessExit);
             _provider = provider;
             _discord = discord;
             _command = commands;
@@ -46,8 +47,9 @@ namespace AwesomeBot.Services
             _lavaNode.OnTrackEnded += _lavaNode_OnTrackEnded;
             _discord.UserJoined += _discord_UserJoined;
             _command.CommandExecuted += _command_CommandExecuted;
-
+            
         }
+
 
         private async Task _command_CommandExecuted(Optional<CommandInfo> arg1, ICommandContext arg2, IResult arg3)
         {
@@ -161,51 +163,51 @@ namespace AwesomeBot.Services
         {
             //make sure msgs arent sent by bots or the server, get prefix and run commands
             var msg = arg as SocketUserMessage;
-
-            if (msg != null && !msg.Author.IsBot)
+            if (msg == null)
             {
-                ulong serverId = new ulong();
-                if (!(arg.Channel is IPrivateChannel))
+                return;
+            }
+            if (msg.Author.IsBot)
+            {
+                return;
+            }
+            if (arg.Channel is IPrivateChannel)
+            {
+                await arg.Author.SendMessageAsync("DMs isn't implemented yet, sorry");
+                return;
+            }
+            ulong serverId = new ulong();
+            serverId = (msg.Channel as SocketGuildChannel).Guild.Id;
+            var server = _servers.servers.Find(x => x.Id == serverId);
+            if (server == null)
+            {
+                await _servers.ModifyGuildPrefix(serverId, "!");
+                server = _servers.servers.Find(x => x.Id == serverId);
+            }
+            if (server.CommandChannelId != msg.Channel.Id && server.CommandChannelId != null)
+            {
+                var channel = msg.Channel as SocketGuildChannel;
+
+                await msg.Channel.SendMessageAsync($"Please use commands in {channel.Guild.Channels.ToList().Find(x => x.Id == server.CommandChannelId).Name ?? channel.Guild.DefaultChannel.Name}");
+                return;
+            }
+            string prefix = "";
+            prefix = server.Prefix;
+            var context = new SocketCommandContext(_discord, msg);
+            int pos = 0;
+            if (msg.HasStringPrefix(prefix, ref pos) || msg.HasMentionPrefix(_discord.CurrentUser, ref pos))
+            {
+
+                var result = await _command.ExecuteAsync(context, pos, _provider);
+                if (!result.IsSuccess)
                 {
-                    serverId = (msg.Channel as SocketGuildChannel).Guild.Id;
-                    var server = _servers.servers.Find(x => x.Id == serverId);
-                    if (server == null)
-                    {
-                        await _servers.ModifyGuildPrefix(serverId, "!");
-                        server = _servers.servers.Find(x => x.Id == serverId);
-                    }
-                    if (server.CommandChannelId != msg.Channel.Id && server.CommandChannelId != null)
-                    {
-                        var channel = msg.Channel as SocketGuildChannel;
-
-                        await msg.Channel.SendMessageAsync($"Please use commands in {channel.Guild.Channels.ToList().Find(x => x.Id == server.CommandChannelId).Name ?? channel.Guild.DefaultChannel.Name}");
-                        return;
-                    }
-                    string prefix = "";
-                    prefix = server.Prefix;
-                    var context = new SocketCommandContext(_discord, msg);
-                    int pos = 0;
-                    if (msg.HasStringPrefix(prefix, ref pos) || msg.HasMentionPrefix(_discord.CurrentUser, ref pos))
-                    {
-
-                        var result = await _command.ExecuteAsync(context, pos, _provider);
-                        if (!result.IsSuccess)
-                        {
-                            var reason = result.Error;
-                            string errorMessage = $"The following error occurred: \n {reason}";
-                            Console.WriteLine(errorMessage);
-                        }
-
-                    }
+                    Log.Error($"An error occurred: {result.Error.Value}");
+                    return;
                 }
                 else
                 {
-                    await arg.Author.SendMessageAsync("DMs isn't implemented yet, sorry");
+                    Log.Information($"Command {context.Message} was executed by {context.User.Username}#{context.User.Discriminator}");
                 }
-            }
-            else
-            {
-                Console.WriteLine("Message sent by server or bot");
             }
         }
         //start lavanode basically
@@ -219,9 +221,12 @@ namespace AwesomeBot.Services
 
         private Task OnReady()
         {
-
-            Console.WriteLine($"Connected as {_discord.CurrentUser.Username}#{_discord.CurrentUser.Discriminator}");
+            Log.Information($"Connected as {_discord.CurrentUser.Username}#{_discord.CurrentUser.Discriminator}");
             return Task.CompletedTask;
+        }
+        static void CurrentDomain_ProcessExit(object sender, EventArgs e)
+        {
+            Log.CloseAndFlush();
         }
     }
 }

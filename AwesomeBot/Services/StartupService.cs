@@ -7,6 +7,7 @@ using Discord.WebSocket;
 using System.IO;
 using Core;
 using System.Collections.Generic;
+using Serilog;
 
 namespace AwesomeBot.Services
 {
@@ -45,11 +46,16 @@ namespace AwesomeBot.Services
             await _discord.LoginAsync(Discord.TokenType.Bot, token); //login
             await _discord.StartAsync(); //start bot
             string path = $"{AppContext.BaseDirectory}/LavaLink/Lavalink.jar";
-            startLavaLink(); //run LavaLink server
-            await _discord.SetGameAsync("I'm a bot", null, Discord.ActivityType.Playing); //set status
 
+            startLavaLink(); //run LavaLink server
+            Log.Logger = new LoggerConfiguration()
+                .WriteTo.Console()
+                .WriteTo.File($@"{AppContext.BaseDirectory}log.txt")
+                .CreateLogger();
+            await _discord.SetGameAsync("I'm a bot", null, Discord.ActivityType.Playing); //set status
             await _command.AddModulesAsync(Assembly.GetEntryAssembly(), _provider);
         }
+        
         /// <summary>
         /// Runs LavaLink server using a batch file
         /// </summary>
