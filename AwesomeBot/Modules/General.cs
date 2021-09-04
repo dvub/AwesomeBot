@@ -13,6 +13,7 @@ using System.Text.RegularExpressions;
 using Infrastructure;
 using Common.Extensions;
 using Serilog;
+using Newtonsoft.Json;
 namespace AwesomeBot.Modules
 {
     [Summary("get information!")]
@@ -78,7 +79,7 @@ namespace AwesomeBot.Modules
                     }
                     catch (Exception e)
                     {
-                        Log.Error($"An error occurred:\n{e}");
+                        Log.Error("An error occurred: {@e}", e);
                     }
                 }
                 else
@@ -94,7 +95,7 @@ namespace AwesomeBot.Modules
                     }
                     catch (Exception e)
                     {
-                        Log.Error($"An error occurred:\n{e}");
+                        Log.Error("An error occurred: {@e}", e);
                     }
                 }
 

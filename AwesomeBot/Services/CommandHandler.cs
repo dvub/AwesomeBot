@@ -47,9 +47,12 @@ namespace AwesomeBot.Services
             _lavaNode.OnTrackEnded += _lavaNode_OnTrackEnded;
             _discord.UserJoined += _discord_UserJoined;
             _command.CommandExecuted += _command_CommandExecuted;
-            
+            _lavaNode.OnPlayerUpdated += _lavaNode_OnPlayerUpdated;
         }
-
+        private async Task _lavaNode_OnPlayerUpdated(Victoria.EventArgs.PlayerUpdateEventArgs arg)
+        {
+            Log.Verbose("Player updated: Playing {Track} from {Position}: Guild ID {Id}", arg.Track, arg.Position, arg.Player.VoiceChannel.Guild.Id);
+        }
 
         private async Task _command_CommandExecuted(Optional<CommandInfo> arg1, ICommandContext arg2, IResult arg3)
         {
@@ -109,7 +112,6 @@ namespace AwesomeBot.Services
 
         private async Task _lavaNode_OnTrackEnded(Victoria.EventArgs.TrackEndedEventArgs arg)
         {
-            Console.WriteLine("Track ended:" + arg.Reason);
             //if looping is set to true, start playing from beginning
             if (Modules.Media.isLooping)
             {
@@ -206,7 +208,7 @@ namespace AwesomeBot.Services
                 }
                 else
                 {
-                    Log.Information($"Command {context.Message} was executed by {context.User.Username}#{context.User.Discriminator}");
+                    Log.Information("Command {Message} was executed by {User}#{Discriminator}", context.Message, context.User.Username, context.User.Discriminator);
                 }
             }
         }
@@ -216,12 +218,13 @@ namespace AwesomeBot.Services
             if (!_lavaNode.IsConnected)
             {
                 await _lavaNode.ConnectAsync();
+                Log.Information("LavaLink connected");
             }
         }
 
         private Task OnReady()
         {
-            Log.Information($"Connected as {_discord.CurrentUser.Username}#{_discord.CurrentUser.Discriminator}");
+            Log.Information("Connected as {User}#{Discriminator}", _discord.CurrentUser.Username, _discord.CurrentUser.Discriminator);
             return Task.CompletedTask;
         }
         static void CurrentDomain_ProcessExit(object sender, EventArgs e)

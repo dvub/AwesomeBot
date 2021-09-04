@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.IO;
+using Serilog;
 
 namespace Core
 {
@@ -50,9 +51,11 @@ namespace Core
         /// <returns>new JSON config file</returns>
         public static AppSettingsRoot Create()
         {
+            
             if (IsCreated)
             {
                 return Load();
+                
             }
             if (!Directory.Exists(AppContext.BaseDirectory + @"\save"))
                 Directory.CreateDirectory(AppContext.BaseDirectory + @"\save");

@@ -46,7 +46,7 @@ namespace AwesomeBot.Modules
             }
             catch (Exception e)
             {
-                Log.Error($"An error occurred:\n{e}");
+                Log.Error("An error occurred: {@e}", e);
             }
 
         }
@@ -75,8 +75,7 @@ namespace AwesomeBot.Modules
                 }
                 catch (Exception e)
                 {
-                    await ReplyAsync("Something went wrong, try again");
-                    Log.Error($"An error occurred:\n{e}");
+                    Log.Error("An error occurred: {@e}", e);
                 }
 
             }
@@ -116,8 +115,7 @@ namespace AwesomeBot.Modules
                 }
                 catch (Exception e)
                 {
-                    await ReplyAsync("Something went wrong");
-                    Log.Error($"An error occurred:\n{e}");
+                    Log.Error("An error occurred: {@e}", e);
                 }
             }
             else
@@ -128,8 +126,7 @@ namespace AwesomeBot.Modules
                 }
                 catch (Exception e)
                 {
-                    await ReplyAsync("Please provide a valid channel id");
-                    Log.Error($"An error occurred:\n{e}");
+                    Log.Error("An error occurred: {@e}", e);
                 }
             }
         }
@@ -154,8 +151,7 @@ namespace AwesomeBot.Modules
                 }
                 catch (Exception e)
                 {
-                    await ReplyAsync("Please provide a valid channel id");
-                    Log.Error($"An error occurred:\n{e}");
+                    Log.Error("An error occurred: {@e}", e);
                 }
             }
         }

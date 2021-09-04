@@ -8,6 +8,11 @@ using System.IO;
 using Core;
 using System.Collections.Generic;
 using Serilog;
+using Newtonsoft.Json;
+using Serilog.Core;
+using Serilog.Events;
+using Serilog.Formatting.Json;
+using System.Threading;
 
 namespace AwesomeBot.Services
 {
@@ -48,14 +53,28 @@ namespace AwesomeBot.Services
             string path = $"{AppContext.BaseDirectory}/LavaLink/Lavalink.jar";
 
             startLavaLink(); //run LavaLink server
+            Serilog.Debugging.SelfLog.Enable(msg => Debug.WriteLine(msg));
+            string template = "{NewLine}{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:j}{NewLine}{Exception}{Properties:j}";
             Log.Logger = new LoggerConfiguration()
-                .WriteTo.Console()
-                .WriteTo.File($@"{AppContext.BaseDirectory}log.txt")
+                .MinimumLevel.Verbose()
+                .Destructure.ByTransforming<Exception>(
+                x => new { StackTrace = x.StackTrace})
+                .WriteTo.Console(outputTemplate: template)
+                .WriteTo.File($@"{AppContext.BaseDirectory}logs.txt", outputTemplate: template)
+                .Enrich.With(new ThreadIdEnricher())
+                .MinimumLevel.Verbose()
                 .CreateLogger();
             await _discord.SetGameAsync("I'm a bot", null, Discord.ActivityType.Playing); //set status
             await _command.AddModulesAsync(Assembly.GetEntryAssembly(), _provider);
         }
-        
+        class ThreadIdEnricher : ILogEventEnricher
+        {
+            public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
+            {
+                logEvent.AddPropertyIfAbsent(propertyFactory.CreateProperty(
+                        "ThreadId", Thread.CurrentThread.ManagedThreadId));
+            }
+        }
         /// <summary>
         /// Runs LavaLink server using a batch file
         /// </summary>

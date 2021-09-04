@@ -14,7 +14,7 @@ using Interactivity.Pagination;
 using Victoria.Responses.Search;
 using Victoria.Filters;
 using Serilog;
-
+using Common.Extensions;
 namespace AwesomeBot.Modules
 {
     [Summary("Does lots of different things like play music!")]
@@ -146,9 +146,9 @@ namespace AwesomeBot.Modules
             }
             catch (Exception e)
             {
-                Log.Error($"An error occurred\n{e}");
+                Log.Error("An error occurred: {@e}", e);
             }
-            
+
         }
         [Command("pause")]
         [Summary("pause a currently playing song")]
@@ -175,7 +175,7 @@ namespace AwesomeBot.Modules
             }
             catch (Exception e)
             {
-                Log.Error($"An error occurred\n{e}");
+                Log.Error("An error occurred: {@e}", e);
             }
 
         }
@@ -259,7 +259,7 @@ namespace AwesomeBot.Modules
             }
             catch (Exception e)
             {
-                Log.Error($"An error occurred\n{e}");
+                Log.Error("An error occurred: {@e}", e);
             }
 
         }
@@ -298,7 +298,7 @@ namespace AwesomeBot.Modules
                 }
                 catch (Exception e)
                 {
-                    Log.Error($"An error occurred\n{e}");
+                    Log.Error("An error occurred: {@e}", e);
                 }
 
                 var paginator = new StaticPaginatorBuilder()
@@ -366,7 +366,7 @@ namespace AwesomeBot.Modules
             }
             catch (Exception e)
             {
-                Log.Error($"An error occurred\n{e}");
+                Log.Error("An error occurred: {@e}", e);
             }
 
 
@@ -401,9 +401,9 @@ namespace AwesomeBot.Modules
                 await player.SeekAsync(seekPosition);
                 await ReplyAsync($"Playing from **_{hours}:{minutes}:{seconds}._**");
             }
-            catch (Exception e) 
+            catch (Exception e)
             {
-                Log.Error($"An error occurred:\n{e}");
+                Log.Error("An error occurred: {@e}", e);
             }
         }
 
@@ -446,8 +446,16 @@ namespace AwesomeBot.Modules
                     int first = int.Parse(bands[0]);
                     int second = int.Parse(bands[1]);
                     int size = second - first + 1;
-                    double slope = (-0.25f - 1) / (-100 - 100);
-                    double output = -0.25f + slope * (_gain - -100);
+                    float output = 0;
+                    if (_gain >= 0)
+                    {
+                        output = ((float)_gain).Remap(-100, 100, -1f, 1);
+                    }
+                    else
+                    {
+                        output = ((float)_gain).Remap(-100, 0, -0.25f, 0);
+                    }
+
                     for (int i = 0; i < size; i++)
                     {
                         EQBands.Add(new EqualizerBand(i + first, output));
@@ -461,7 +469,7 @@ namespace AwesomeBot.Modules
                 {
 
                     _band = int.Parse(band);
-                    _gain = int.Parse(gain) + 1;
+                    _gain = int.Parse(gain);
 
                     if (!(_gain >= -100 && _gain <= 100))
                     {
@@ -473,8 +481,16 @@ namespace AwesomeBot.Modules
                         await ReplyAsync("Enter a band value from `0 - 15`");
                         return;
                     }
-                    double slope = (-0.25f - 1) / (-100 - 100);
-                    double output = -0.25f + slope * (_gain - -100);
+                    float output = 0;
+                    if (_gain >= 0)
+                    {
+                        output = ((float)_gain).Remap(-100, 100, -1f, 1);
+                    }
+                    else
+                    {
+                        output = ((float)_gain).Remap(-100, 0, -0.25f, 0);
+                    }
+                    
                     await player.EqualizerAsync(new EqualizerBand(_band, output));
 
                     await ReplyAsync($"Applied gain **_{_gain}_** to band **_{_band}_**");
@@ -482,7 +498,7 @@ namespace AwesomeBot.Modules
             }
             catch (Exception e)
             {
-                Log.Error($"An error occurred\n{e}");
+                Log.Error("An error occurred: {@e}", e);
             }
         }
     }

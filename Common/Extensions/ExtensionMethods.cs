@@ -6,8 +6,23 @@ using System.Threading.Tasks;
 
 namespace Common.Extensions
 {
-    public static class StringExtension
+    public static class ExtensionMethods
     {
+        public static float Remap(this float from, float fromMin, float fromMax, float toMin, float toMax)
+        {
+            var fromAbs = from - fromMin;
+            var fromMaxAbs = fromMax - fromMin;
+
+            var normal = fromAbs / fromMaxAbs;
+
+            var toMaxAbs = toMax - toMin;
+            var toAbs = toMaxAbs * normal;
+
+            var to = toAbs + toMin;
+
+            return to;
+        }
+
         /// <summary>
         /// Capitalizes first letter in a word.
         /// </summary>
