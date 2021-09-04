@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace Infrastructure
 {
+    /// <summary>
+    /// Context for Servers database. Contains methods to update server information.
+    /// </summary>
     public class Context : DbContext
     {
         //NOTE TO SELF:
@@ -14,18 +17,25 @@ namespace Infrastructure
          * EFC will break otherwise
          * because ???? 
          * (thanks again huebyte)
-            */
-       private readonly AppSettingsRoot _config;
+         */
+
+        //dependency injection
+        private readonly AppSettingsRoot _config;
 
         public Context(AppSettingsRoot config)
-            
+
         {
-           _config = config;
+            _config = config;
         }
 
-        public DbSet<Server> Servers { get; set; }
+        public DbSet<Server> Servers
+        {
+            get;
+            set;
+        }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
+            //using appsettingsroot, get connection string
             string connectionString = _config.ConnectionString;
             var serverVersion = ServerVersion.AutoDetect(connectionString);
             optionsBuilder.UseMySql(connectionString, serverVersion);
@@ -39,7 +49,5 @@ namespace Infrastructure
         public EventHandler ServerChangesSaved;
 
     }
-
-
 
 }

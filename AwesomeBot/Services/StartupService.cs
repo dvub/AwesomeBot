@@ -10,13 +10,16 @@ using System.Collections.Generic;
 
 namespace AwesomeBot.Services
 {
+    /// <summary>
+    /// Service to start bot.
+    /// </summary>
     public class StartupService
     {
+        //dependency injection
         public static IServiceProvider _provider;
         public static DiscordSocketClient _discord;
         private readonly CommandService _command;
         private readonly AppSettingsRoot _config;
-
 
         public StartupService(IServiceProvider provider, DiscordSocketClient discord, CommandService commands, AppSettingsRoot config)
         {
@@ -26,33 +29,37 @@ namespace AwesomeBot.Services
             _config = config;
 
         }
-
+        /// <summary>
+        /// Starts the bot.
+        /// </summary>
         public async Task StartAsync()
         {
 
-            
             string token = _config.TokenString;
             if (string.IsNullOrEmpty(token))
             {
                 Console.WriteLine("please provide discord token");
                 return;
             }
-           
-            await _discord.LoginAsync(Discord.TokenType.Bot, token);
-            await _discord.StartAsync();
+
+            await _discord.LoginAsync(Discord.TokenType.Bot, token); //login
+            await _discord.StartAsync(); //start bot
             string path = $"{AppContext.BaseDirectory}/LavaLink/Lavalink.jar";
-            startLavaLink();
-            await _discord.SetGameAsync("I'm a bot", null, Discord.ActivityType.Playing);
+            startLavaLink(); //run LavaLink server
+            await _discord.SetGameAsync("I'm a bot", null, Discord.ActivityType.Playing); //set status
 
             await _command.AddModulesAsync(Assembly.GetEntryAssembly(), _provider);
         }
+        /// <summary>
+        /// Runs LavaLink server using a batch file
+        /// </summary>
         public void startLavaLink()
         {
             ProcessStartInfo psi = new ProcessStartInfo();
-            psi.FileName = Path.Combine(AppContext.BaseDirectory, "runServer.bat");
+            psi.FileName = Path.Combine(AppContext.BaseDirectory, "runServer.bat"); //run batch file to start LavaLink
             psi.CreateNoWindow = true;
             psi.WindowStyle = ProcessWindowStyle.Normal;
-            psi.UseShellExecute = true ;
+            psi.UseShellExecute = true;
             Process.Start(psi);
         }
     }

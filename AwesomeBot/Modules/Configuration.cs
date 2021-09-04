@@ -41,7 +41,6 @@ namespace AwesomeBot.Modules
             await _servers.ModifyGuildPrefix(Context.Guild.Id, prefix);
             await ReplyAsync($"The prefix has been changed to `{prefix}`");
 
-
         }
         [Command("greetingtype")]
         [Summary("Sets the type of greeting users receive when joining. Use DM, Channel, or Disabled.")]
@@ -57,7 +56,6 @@ namespace AwesomeBot.Modules
                     return;
                 }
                 await ReplyAsync($"Set to greet users in {_type}");
-
 
             }
             else
@@ -76,7 +74,7 @@ namespace AwesomeBot.Modules
         }
         [Command("greeting")]
         [Summary("Sets the message when a user joins a server.")]
-        [RequireUserPermission(GuildPermission.Administrator, ErrorMessage = "Error: You do not have permission to use this command!")]
+        [RequireUserPermission(GuildPermission.Administrator)]
         public async Task SetGreetingAsync([Remainder] string message = null)
         {
             if (message == null)
@@ -92,11 +90,12 @@ namespace AwesomeBot.Modules
             else
             {
                 await _servers.ModifyGuildGreeting(Context.Guild.Id, message);
+                await ReplyAsync($"Modified greeting to be {message}");
             }
         }
         [Command("Greetingchannel")]
         [Summary("Sets the channel ID where users are greeted if greetingtype is set to channel. Right click the channel name and Copy ID to get the ID.")]
-        [RequireUserPermission(GuildPermission.Administrator, ErrorMessage = "Error: You do not have permission to use this command!")]
+        [RequireUserPermission(GuildPermission.Administrator)]
         public async Task SetGreetingChannel([Remainder] string id = null)
         {
             if (id == null)
@@ -125,7 +124,7 @@ namespace AwesomeBot.Modules
         }
         [Command("channel")]
         [Summary("Sets channel ID where commands can be used. Right click the channel name and Copy ID to get the ID.")]
-        [RequireUserPermission(GuildPermission.Administrator, ErrorMessage = "Error: You do not have permission to use this command!")]
+        [RequireUserPermission(GuildPermission.Administrator)]
         public async Task SetCommandChannelId([Remainder] string id = null)
         {
             if (id == null)

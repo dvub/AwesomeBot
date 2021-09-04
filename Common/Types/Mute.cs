@@ -9,6 +9,9 @@ using Discord.WebSocket;
 
 namespace Common.Types
 {
+    /// <summary>
+    /// Mute type for creating / removing mutes.
+    /// </summary>
     public class Mute
     {
         public SocketGuild Guild;

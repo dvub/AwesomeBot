@@ -11,27 +11,33 @@ using System.Reflection;
 using Common.Types;
 using Common;
 
-
 namespace AwesomeBot.Modules
 {
     [Summary("Commands for administrative action.")]
     public class Admin : ModuleBase<SocketCommandContext>
     {
+        private readonly ServerService _servers;
+        public Admin(ServerService servers)
+        {
+            _servers = servers;
+        }
+
         [Command("purge")]
         [Summary("Delete messages. Must have certain permissions to use.")]
-        [RequireUserPermission(ChannelPermission.ManageChannels, ErrorMessage = "Error: You do not have permission to use this command!")]
+
+        [RequireUserPermission(ChannelPermission.ManageChannels)]
         public async Task Purge(int amount)
         {
             var _user = Context.User as SocketGuildUser;
-                var messages = await Context.Channel.GetMessagesAsync(amount + 1).FlattenAsync();
-                await (Context.Channel as SocketTextChannel).DeleteMessagesAsync(messages);
-                await ReplyAsync($"⚖️ Deleted **_{messages.Count()}_** from **_{Context.Channel}_**");
-                Console.WriteLine($"Deleted **_{messages.Count()}_** from **_{Context.Channel}_**");
+            var messages = await Context.Channel.GetMessagesAsync(amount + 1).FlattenAsync();
+            await (Context.Channel as SocketTextChannel).DeleteMessagesAsync(messages);
+            await ReplyAsync($"⚖️ Deleted **_{messages.Count()}_** from **_{Context.Channel}_**");
+            Console.WriteLine($"Deleted **_{messages.Count()}_** from **_{Context.Channel}_**");
         }
         [Command("mute")]
-        [Summary("Mute a user in a text channel. Requires permissions")]
-        [RequireUserPermission(ChannelPermission.ManageChannels, ErrorMessage = "Error: You do not have permission to use this command!")]
-        public async Task MuteAsync(SocketGuildUser user, int time, [Remainder]string reason = null)
+        [Summary("Mute a user in a text channel. Requires permissions.")]
+        [RequireUserPermission(ChannelPermission.ManageChannels)]
+        public async Task MuteAsync(SocketGuildUser user, int time, [Remainder] string reason = null)
         {
             var _user = Context.User as SocketGuildUser;
             var permissions = user.GetPermissions(Context.Channel as IGuildChannel);
@@ -50,7 +56,6 @@ namespace AwesomeBot.Modules
             {
                 role = await Context.Guild.CreateRoleAsync("Muted", new GuildPermissions(sendMessages: false), null, false, null);
 
-                 
             }
             if (role.Position > Context.Guild.CurrentUser.Hierarchy)
             {
@@ -64,23 +69,29 @@ namespace AwesomeBot.Modules
             }
             await role.ModifyAsync(x => x.Position = Context.Guild.CurrentUser.Hierarchy);
 
-                foreach (var channel in Context.Guild.TextChannels)
+            foreach (var channel in Context.Guild.TextChannels)
+            {
+                if (!channel.GetPermissionOverwrite(role).HasValue || channel.GetPermissionOverwrite(role).Value.SendMessages == PermValue.Allow)
                 {
-                    if (!channel.GetPermissionOverwrite(role).HasValue || channel.GetPermissionOverwrite(role).Value.SendMessages == PermValue.Allow)
-                    {
 
-                        await channel.AddPermissionOverwriteAsync(role, new OverwritePermissions(sendMessages: PermValue.Deny));
+                    await channel.AddPermissionOverwriteAsync(role, new OverwritePermissions(sendMessages: PermValue.Deny));
 
-                    }
                 }
-                CommandHandler.Mutes.Add(new Mute { Guild = Context.Guild, User = user, End = DateTime.Now + TimeSpan.FromMinutes(time), Role = role });
-                await user.AddRoleAsync(role);
-                await ReplyAsync($" ⚖️ Muted **_{user.Username}_** for **_{time} minutes_**, Reason : **_{reason ?? "None"}_**");
+            }
+            CommandHandler.Mutes.Add(new Mute
+            {
+                Guild = Context.Guild,
+                User = user,
+                End = DateTime.Now + TimeSpan.FromMinutes(time),
+                Role = role
+            });
+            await user.AddRoleAsync(role);
+            await ReplyAsync($" ⚖️ Muted **_{user.Username}_** for **_{time} minutes_**, Reason : **_{reason ?? "None "}_**");
 
         }
         [Command("unmute")]
-        [Summary("unmute a user")]
-        [RequireUserPermission(ChannelPermission.ManageChannels, ErrorMessage = "Error: You do not have permission to use this command!")]
+        [Summary("unmute a user ")]
+        [RequireUserPermission(ChannelPermission.ManageChannels)]
         public async Task UnmuteAsync(SocketGuildUser user)
         {
             var role = (Context.Guild as IGuild).Roles.FirstOrDefault(x => x.Name == "Muted");
@@ -90,7 +101,6 @@ namespace AwesomeBot.Modules
             {
                 await ReplyAsync("This user has not been muted yet");
                 return;
-
 
             }
             if (role.Position > Context.Guild.CurrentUser.Hierarchy)
@@ -103,20 +113,20 @@ namespace AwesomeBot.Modules
                 await ReplyAsync("The user is not muted.");
                 return;
             }
-                await user.RemoveRoleAsync(role);
-                await ReplyAsync($"⚖️ Unmuted **_{user.Username}._**");
+            await user.RemoveRoleAsync(role);
+            await ReplyAsync($"⚖️ Unmuted **_{user.Username}._**");
         }
         [Command("warn")]
         [Summary("mentions a user with a warning message.")]
-        [RequireUserPermission(ChannelPermission.ManageChannels, ErrorMessage = "Error: You do not have permission to use this command!")]
+        [RequireUserPermission(ChannelPermission.ManageChannels)]
         public async Task WarnAsync(SocketGuildUser user, [Remainder] string message = null)
         {
             var _user = Context.User as SocketGuildUser;
-                await ReplyAsync($"⚖️ {user.Username} was warned. Reason: **_{message ?? "None"}_**");
+            await ReplyAsync($"⚖️ {user.Username} was warned. Reason: **_{message ?? "None "}_**");
         }
         [Command("kick")]
         [Summary("Kick a user from the guild.")]
-        [RequireUserPermission(ChannelPermission.ManageChannels, ErrorMessage = "Error: You do not have permission to use this command!")]
+        [RequireUserPermission(ChannelPermission.ManageChannels)]
         public async Task KickAsync(SocketGuildUser user, [Remainder] string reason = null)
         {
             var _user = Context.User as SocketGuildUser;
@@ -132,16 +142,15 @@ namespace AwesomeBot.Modules
                 await ReplyAsync("This user has higher permissions than the bot");
                 return;
             }
-                await user.KickAsync(reason, null);
-                await ReplyAsync($"⚖️ User **_{user.Username}_** was kicked for: **_{reason ?? "No reason provided"}._**");
-
+            await user.KickAsync(reason, null);
+            await ReplyAsync($"⚖️ User **_{user.Username}_** was kicked for: **_{reason ?? "No reason provided "}._**");
 
         }
         [Command("Ban")]
         [Summary("Ban a user from the guild.")]
-        [RequireUserPermission(ChannelPermission.ManageChannels, ErrorMessage = "Error: You do not have permission to use this command!")]
+        [RequireUserPermission(ChannelPermission.ManageChannels)]
 
-        public async Task BanAsync(SocketGuildUser user, [Remainder]string reason = null)
+        public async Task BanAsync(SocketGuildUser user, [Remainder] string reason = null)
         {
             var _user = Context.User as SocketGuildUser;
             var role = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Mod");
@@ -156,13 +165,14 @@ namespace AwesomeBot.Modules
                 await ReplyAsync("This user has higher permissions than the bot");
                 return;
             }
-                await Context.Guild.AddBanAsync(user, 0, reason, null);
-                await ReplyAsync($"⚖️ User **_{user.Username}_** was banned: **_{reason ?? "None"}_**");
+            await Context.Guild.AddBanAsync(user, 0, reason, null);
+            await ReplyAsync($"⚖️ User **_{user.Username}_** was banned: **_{reason ?? "None "}_**");
 
         }
+
         [Command("unban")]
         [Summary("Unbans a banned user from the guild.")]
-        [RequireUserPermission(ChannelPermission.ManageChannels, ErrorMessage = "Error: You do not have permission to use this command!")]
+        [RequireUserPermission(ChannelPermission.ManageChannels)]
         public async Task UnbanAsync(ulong user)
         {
             var _user = Context.User as SocketGuildUser;

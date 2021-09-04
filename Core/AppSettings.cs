@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,22 +12,42 @@ namespace Core
     //Thanks to HueByte for letting me use his AppSettings class
     //and helping me out so much
 
+    //creating a cool class
     public class ConnectionString
     {
-        public string DatabaseConnectionString { get; set; }
+        public string DatabaseConnectionString
+        {
+            get;
+            set;
+        }
     }
+    /// <summary>
+    /// Class to create instance of config file
+    /// </summary>
     public class AppSettingsRoot
     {
-        public string ConnectionString { get; set; }
-        public string TokenString { get; set; }
+        public string ConnectionString
+        {
+            get;
+            set;
+        }
+        public string TokenString
+        {
+            get;
+            set;
+        }
 
+        //??? shittery
         [JsonIgnore]
         public static string FILE_NAME = AppContext.BaseDirectory + "appsettings.json";
 
         [JsonIgnore]
         public static bool IsCreated
-            => (File.Exists(FILE_NAME));
-
+          => (File.Exists(FILE_NAME));
+        /// <summary>
+        /// make new JSON file.
+        /// </summary>
+        /// <returns>new JSON config file</returns>
         public static AppSettingsRoot Create()
         {
             if (IsCreated)
@@ -52,6 +71,10 @@ namespace Core
             return config;
 
         }
+        /// <summary>
+        /// Loads existing JSON file.
+        /// </summary>
+        /// <returns>JSON config file.</returns>
         public static AppSettingsRoot Load()
         {
             var readBytes = File.ReadAllBytes(FILE_NAME);
@@ -60,4 +83,3 @@ namespace Core
         }
     }
 }
-

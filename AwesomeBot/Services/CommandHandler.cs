@@ -8,7 +8,7 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Common;
-using Common.Extensions; 
+using Common.Extensions;
 using Victoria;
 using Common.Types;
 using Infrastructure;
@@ -18,15 +18,18 @@ namespace AwesomeBot.Services
     //TODO: LOGGING
     //  (MAKE IT GOOD)
 
+    /// <summary>
+    /// Service to handle commands and mutes
+    /// </summary>
     public class CommandHandler
     {
+        //dependency injection
         public static IServiceProvider _provider;
         public static DiscordSocketClient _discord;
         public static CommandService _command;
         private readonly LavaNode _lavaNode;
         public static List<Mute> Mutes = new List<Mute>();
         private readonly ServerService _servers;
-
 
         public CommandHandler(DiscordSocketClient discord, CommandService commands, IServiceProvider provider, LavaNode lavaNode, ServerService servers)
         {
@@ -48,12 +51,36 @@ namespace AwesomeBot.Services
 
         private async Task _command_CommandExecuted(Optional<CommandInfo> arg1, ICommandContext arg2, IResult arg3)
         {
-            Console.WriteLine("A command was executed");
+            var channel = arg2.Channel;
+            if (arg3.IsSuccess) return;
+            //check for errors, send error msg
+            switch (arg3.Error)
+            {
+                case CommandError.UnknownCommand:
+                    await channel.SendMessageAsync("I don't recognize that command!");
+                    return;
+                case CommandError.BadArgCount:
+                    await channel.SendMessageAsync("Please provide correct arguments for command!");
+                    return;
+                case CommandError.UnmetPrecondition:
+                    await channel.SendMessageAsync("You don't have permission to use that command!");
+                    return;
+                case CommandError.ParseFailed:
+                    await channel.SendMessageAsync("Please provide correct arguments for command and ensure spelling is correct!");
+                    return;
+                case CommandError.ObjectNotFound:
+                    await channel.SendMessageAsync("Please provide correct arguments for command and ensure spelling is correct!");
+                    return;
+                default:
+                    await channel.SendMessageAsync("An error occurred. Make sure your spelling is correct.");
+                    return;
+
+            }
         }
 
         private async Task _discord_UserJoined(SocketGuildUser arg)
         {
-            
+
             ulong id = arg.Guild.Id;
             var server = _servers.servers.Find(x => x.Id == id);
             if (server == null)
@@ -63,6 +90,7 @@ namespace AwesomeBot.Services
                 server = _servers.servers.Find(x => x.Id == id);
 
             }
+            //do greeting based on server settings
             switch (server.GreetingType)
             {
                 case GreetingType.Channel:
@@ -73,14 +101,14 @@ namespace AwesomeBot.Services
                     return;
                 case GreetingType.Disabled:
                     return;
-            }         
+            }
 
         }
 
         private async Task _lavaNode_OnTrackEnded(Victoria.EventArgs.TrackEndedEventArgs arg)
         {
             Console.WriteLine("Track ended:" + arg.Reason);
-
+            //if looping is set to true, start playing from beginning
             if (Modules.Media.isLooping)
             {
                 if (arg.Reason == Victoria.Enums.TrackEndReason.Stopped)
@@ -94,18 +122,19 @@ namespace AwesomeBot.Services
         }
         private async Task MuteHandler()
         {
+            //add and remove mutes for admin
             List<Mute> Remove = new List<Mute>();
-            foreach(var mute in Mutes)
+            foreach (var mute in Mutes)
             {
                 if (DateTime.Now < mute.End)
                     continue;
                 var guild = _discord.GetGuild(mute.Guild.Id);
-                if(guild.GetRole(mute.Role.Id) == null)
+                if (guild.GetRole(mute.Role.Id) == null)
                 {
                     Remove.Add(mute);
                     continue;
                 }
-                
+
                 if (guild.GetUser(mute.User.Id) == null)
                 {
                     Remove.Add(mute);
@@ -130,6 +159,7 @@ namespace AwesomeBot.Services
 
         private async Task _discord_MessageReceived(SocketMessage arg)
         {
+            //make sure msgs arent sent by bots or the server, get prefix and run commands
             var msg = arg as SocketUserMessage;
 
             if (msg != null && !msg.Author.IsBot)
@@ -147,7 +177,7 @@ namespace AwesomeBot.Services
                     if (server.CommandChannelId != msg.Channel.Id && server.CommandChannelId != null)
                     {
                         var channel = msg.Channel as SocketGuildChannel;
-                        
+
                         await msg.Channel.SendMessageAsync($"Please use commands in {channel.Guild.Channels.ToList().Find(x => x.Id == server.CommandChannelId).Name ?? channel.Guild.DefaultChannel.Name}");
                         return;
                     }
@@ -163,15 +193,9 @@ namespace AwesomeBot.Services
                         {
                             var reason = result.Error;
                             string errorMessage = $"The following error occurred: \n {reason}";
-                            await context.Channel.SendMessageAsync(errorMessage);
                             Console.WriteLine(errorMessage);
-
-
                         }
-                        else
-                        {
-                            Console.WriteLine(result);
-                        }
+
                     }
                 }
                 else
@@ -184,13 +208,15 @@ namespace AwesomeBot.Services
                 Console.WriteLine("Message sent by server or bot");
             }
         }
+        //start lavanode basically
         private async Task onReadyAsync()
         {
-            if(!_lavaNode.IsConnected)
+            if (!_lavaNode.IsConnected)
             {
                 await _lavaNode.ConnectAsync();
             }
         }
+
         private Task OnReady()
         {
 
