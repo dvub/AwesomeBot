@@ -11,9 +11,11 @@ using Serilog;
 using Newtonsoft.Json;
 using Serilog.Core;
 using Serilog.Events;
+using Destructurama.Attributed;
 using Serilog.Formatting.Json;
 using System.Threading;
-
+using Destructurama;
+using Serilog.Enrichers;
 namespace AwesomeBot.Services
 {
     /// <summary>
@@ -50,20 +52,12 @@ namespace AwesomeBot.Services
 
             await _discord.LoginAsync(Discord.TokenType.Bot, token); //login
             await _discord.StartAsync(); //start bot
-            string path = $"{AppContext.BaseDirectory}/LavaLink/Lavalink.jar";
 
-            startLavaLink(); //run LavaLink server
+            ConfigureLogging();
+            StartLavaLink(); //run LavaLink server
             Serilog.Debugging.SelfLog.Enable(msg => Debug.WriteLine(msg));
-            string template = "{NewLine}{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:j}{NewLine}{Exception}{Properties:j}";
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Verbose()
-                .Destructure.ByTransforming<Exception>(
-                x => new { StackTrace = x.StackTrace})
-                .WriteTo.Console(outputTemplate: template)
-                .WriteTo.File($@"{AppContext.BaseDirectory}logs.txt", outputTemplate: template)
-                .Enrich.With(new ThreadIdEnricher())
-                .MinimumLevel.Verbose()
-                .CreateLogger();
+            
+            
             await _discord.SetGameAsync("I'm a bot", null, Discord.ActivityType.Playing); //set status
             await _command.AddModulesAsync(Assembly.GetEntryAssembly(), _provider);
         }
@@ -75,10 +69,25 @@ namespace AwesomeBot.Services
                         "ThreadId", Thread.CurrentThread.ManagedThreadId));
             }
         }
+        public void ConfigureLogging()
+        {
+            string OutputTemplate = "{NewLine}{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:j}{NewLine}{Exception}{Properties:j}";
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Information()
+                .MinimumLevel.Override("System", LogEventLevel.Warning)
+                .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+                .Enrich.FromLogContext()
+                .Enrich.WithProcessId()
+                .Enrich.WithMachineName()
+                .Enrich.WithThreadId()
+                .WriteTo.Console(outputTemplate: OutputTemplate)
+                .WriteTo.File(path: $"{AppContext.BaseDirectory}log.txt", outputTemplate: OutputTemplate)
+                .CreateLogger();
+        }
         /// <summary>
         /// Runs LavaLink server using a batch file
         /// </summary>
-        public void startLavaLink()
+        public void StartLavaLink()
         {
             ProcessStartInfo psi = new ProcessStartInfo();
             psi.FileName = Path.Combine(AppContext.BaseDirectory, "runServer.bat"); //run batch file to start LavaLink

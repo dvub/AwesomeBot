@@ -451,6 +451,11 @@ namespace AwesomeBot.Modules
                     {
                         output = ((float)_gain).Remap(-100, 100, -1f, 1);
                     }
+                    else if (_gain == 0)
+                    {
+
+                        output = 0.000001f;
+                    }
                     else
                     {
                         output = ((float)_gain).Remap(-100, 0, -0.25f, 0);
@@ -485,6 +490,11 @@ namespace AwesomeBot.Modules
                     if (_gain >= 0)
                     {
                         output = ((float)_gain).Remap(-100, 100, -1f, 1);
+                    }
+                    else if (_gain == 0)
+                    {
+
+                        output = 0.000001f;
                     }
                     else
                     {

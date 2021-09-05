@@ -7,21 +7,13 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.IO;
 using Serilog;
-
+using Newtonsoft;
+using Newtonsoft.Json.Linq;
 namespace Core
 {
     //Thanks to HueByte for letting me use his AppSettings class
     //and helping me out so much
 
-    //creating a cool class
-    public class ConnectionString
-    {
-        public string DatabaseConnectionString
-        {
-            get;
-            set;
-        }
-    }
     /// <summary>
     /// Class to create instance of config file
     /// </summary>
@@ -37,7 +29,6 @@ namespace Core
             get;
             set;
         }
-
         //??? shittery
         [JsonIgnore]
         public static string FILE_NAME = AppContext.BaseDirectory + "appsettings.json";
@@ -61,6 +52,7 @@ namespace Core
                 Directory.CreateDirectory(AppContext.BaseDirectory + @"\save");
             var config = new AppSettingsRoot()
             {
+
                 ConnectionString = "server=;user=;database=;port=;Connection Timeout=;",
                 TokenString = ""
 
